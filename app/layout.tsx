@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import Script from "next/script"; // 引入 Next.js 官方 Script 元件
-import { GoogleAnalytics } from '@next/third-parties/google'; // 引入 GA4 元件
+import { GoogleAnalytics } from '@next/third-parties/google';
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -13,7 +12,6 @@ export const metadata: Metadata = {
   },
   description: "紀錄影視感動瞬間。分享電影、影集心得，喜歡的朋友快到 FB 給【影視戴爾瑞】一個讚！",
   authors: [{ name: "戴爾瑞" }],
-  // ── Google Search Console 驗證 ──────────────────────────────────────────
   verification: {
     google: process.env.NEXT_PUBLIC_GSC_VERIFICATION || "12fb8cUsqPU1kryC7D5aWM28QHxpY6yti1lAOWG4kkI",
   },
@@ -49,20 +47,19 @@ export default function RootLayout({
   return (
     <html lang="zh-TW" className="scroll-smooth">
       <head>
-        {/* ── Google AdSense 全域驗證腳本 ── */}
-        <Script
+        {/* ── 原生 AdSense 程式碼片段（直接注入 <head>） ── */}
+        <script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1840753808001223"
           crossOrigin="anonymous"
-          strategy="afterInteractive"
-        />
+        ></script>
       </head>
       <body className="flex min-h-screen flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 font-sans">
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
         
-        {/* ── Google Analytics 4 (GA4) 追蹤碼 ── */}
+        {/* ── GA4 追蹤碼 ── */}
         <GoogleAnalytics gaId="G-93Q9T0VBMF" />
       </body>
     </html>
