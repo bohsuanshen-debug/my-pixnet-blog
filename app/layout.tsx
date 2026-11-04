@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   // 步驟：到 GSC → 新增資源 → 選「網址前置字串」→ 驗證方式選「HTML 標記」
   // 複製 content="xxxx" 裡的字串，貼到下方 'YOUR_GSC_VERIFICATION_CODE' 位置
   verification: {
-    google: process.env.NEXT_PUBLIC_GSC_VERIFICATION || "YOUR_GSC_VERIFICATION_CODE",
+    google: process.env.NEXT_PUBLIC_GSC_VERIFICATION || "12fb8cUsqPU1kryC7D5aWM28QHxpY6yti1lAOWG4kkI",
   },
   icons: {
     icon: "/logo.jpg",
