@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@next/third-parties": "^16.4.5",
     "@notionhq/client": "^2.2.15",
     "clsx": "^2.1.1",
     "lucide-react": "^0.453.0",

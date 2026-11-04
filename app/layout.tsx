@@ -61,3 +61,21 @@ export default function RootLayout({
     </html>
   );
 }
+
+import { GoogleAnalytics } from '@next/third-parties/google'
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html lang="zh-Hant">
+      <body>
+        {children}
+      </body>
+      {/* 請將 G-93Q9T0VBMF 替換為你剛剛複製的真實 GA4 評量 ID */}
+      <GoogleAnalytics gaId="G-93Q9T0VBMF" />
+    </html>
+  )
+}
