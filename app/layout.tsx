@@ -5,13 +5,19 @@ import Footer from "@/components/Footer";
 import { AdSenseScript } from "@/components/AdSense";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://example.com"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://moviesdiary.vercel.app"),
   title: {
     default: "影視戴爾瑞 | 電影影集心得分享",
     template: "%s | 影視戴爾瑞",
   },
   description: "紀錄影視感動瞬間。分享電影、影集心得，喜歡的朋友快到 FB 給【影視戴爾瑞】一個讚！",
   authors: [{ name: "戴爾瑞" }],
+  // ── Google Search Console 驗證 ──────────────────────────────────────────
+  // 步驟：到 GSC → 新增資源 → 選「網址前置字串」→ 驗證方式選「HTML 標記」
+  // 複製 content="xxxx" 裡的字串，貼到下方 'YOUR_GSC_VERIFICATION_CODE' 位置
+  verification: {
+    google: process.env.NEXT_PUBLIC_GSC_VERIFICATION || "YOUR_GSC_VERIFICATION_CODE",
+  },
   icons: {
     icon: "/logo.jpg",
     apple: "/logo.jpg",
