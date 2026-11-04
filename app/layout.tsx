@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import Script from "next/script"; // 引入 Next.js 官方 Script 元件
+import { GoogleAnalytics } from '@next/third-parties/google'; // 引入 GA4 元件
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { AdSenseScript } from "@/components/AdSense";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://moviesdiary.vercel.app"),
@@ -13,8 +14,6 @@ export const metadata: Metadata = {
   description: "紀錄影視感動瞬間。分享電影、影集心得，喜歡的朋友快到 FB 給【影視戴爾瑞】一個讚！",
   authors: [{ name: "戴爾瑞" }],
   // ── Google Search Console 驗證 ──────────────────────────────────────────
-  // 步驟：到 GSC → 新增資源 → 選「網址前置字串」→ 驗證方式選「HTML 標記」
-  // 複製 content="xxxx" 裡的字串，貼到下方 'YOUR_GSC_VERIFICATION_CODE' 位置
   verification: {
     google: process.env.NEXT_PUBLIC_GSC_VERIFICATION || "12fb8cUsqPU1kryC7D5aWM28QHxpY6yti1lAOWG4kkI",
   },
@@ -50,32 +49,22 @@ export default function RootLayout({
   return (
     <html lang="zh-TW" className="scroll-smooth">
       <head>
-        {/* 全域非同步載入 AdSense 腳本 (非阻塞 lazyOnload) */}
-        <AdSenseScript />
+        {/* ── Google AdSense 全域驗證腳本 ── */}
+        <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1840753808001223"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
       </head>
       <body className="flex min-h-screen flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 font-sans">
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
+        
+        {/* ── Google Analytics 4 (GA4) 追蹤碼 ── */}
+        <GoogleAnalytics gaId="G-93Q9T0VBMF" />
       </body>
     </html>
   );
-}
-
-import { GoogleAnalytics } from '@next/third-parties/google'
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  return (
-    <html lang="zh-Hant">
-      <body>
-        {children}
-      </body>
-      {/* 請將 G-93Q9T0VBMF 替換為你剛剛複製的真實 GA4 評量 ID */}
-      <GoogleAnalytics gaId="G-93Q9T0VBMF" />
-    </html>
-  )
 }
