@@ -33,7 +33,7 @@ export async function generateMetadata({
     };
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://example.com";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://moviesdiary.vercel.app";
   const postUrl = `${siteUrl}/posts/${post.slug}`;
   const description =
     post.excerpt || `${post.title} - 由戴爾瑞撰寫的深度影評與觀後心得。`;
@@ -78,7 +78,7 @@ export default async function PostPage({
   const readingTime = estimateReadingTime(blocks);
 
   // Schema.org/Article JSON-LD 結構化資料
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://example.com";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://moviesdiary.vercel.app";
   const postUrl = `${siteUrl}/posts/${post.slug}`;
   const jsonLd = {
     "@context": "https://schema.org",
