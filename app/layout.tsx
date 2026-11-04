@@ -7,23 +7,28 @@ import { AdSenseScript } from "@/components/AdSense";
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://example.com"),
   title: {
-    default: "影視戴爾瑞 | 視聽娛樂與電影評論部落格",
+    default: "影視戴爾瑞 | 電影影集心得分享",
     template: "%s | 影視戴爾瑞",
   },
-  description: "精選電影評論、深度觀影筆記與影視文化觀點，全自動同步自 Notion。",
+  description: "紀錄影視感動瞬間。分享電影、影集心得，喜歡的朋友快到 FB 給【影視戴爾瑞】一個讚！",
   authors: [{ name: "戴爾瑞" }],
+  icons: {
+    icon: "/logo.jpg",
+    apple: "/logo.jpg",
+  },
   openGraph: {
     type: "website",
     locale: "zh_TW",
     url: "/",
     siteName: "影視戴爾瑞",
-    title: "影視戴爾瑞 | 視聽娛樂與電影評論部落格",
-    description: "精選電影評論、深度觀影筆記與影視文化觀點，全自動同步自 Notion。",
+    title: "影視戴爾瑞 | 電影影集心得分享",
+    description: "紀錄影視感動瞬間。分享電影、影集心得，喜歡的朋友快到 FB 給【影視戴爾瑞】一個讚！",
+    images: [{ url: "/logo.jpg", width: 1024, height: 1024, alt: "影視戴爾瑞 Logo" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "影視戴爾瑞",
-    description: "精選電影評論、深度觀影筆記與影視文化觀點。",
+    description: "紀錄影視感動瞬間。分享電影、影集心得。",
   },
   robots: {
     index: true,

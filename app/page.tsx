@@ -22,14 +22,36 @@ export default async function HomePage() {
       <section className="mb-14 text-center sm:text-left border-b border-slate-200/80 pb-10 dark:border-slate-800">
         <div className="inline-flex items-center gap-2 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-400/10 dark:text-amber-300 mb-4">
           <Sparkles className="h-3.5 w-3.5" />
-          <span>Notion Headless CMS 動態驅動</span>
+          <span>電影 × 影集 心得分享</span>
         </div>
         <h1 className="font-serif text-3xl sm:text-5xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-          影視觀點與影評日記
+          影視戴爾瑞
         </h1>
         <p className="mt-4 max-w-2xl text-base sm:text-lg leading-relaxed text-slate-600 dark:text-slate-400">
-          紀錄大銀幕與串流劇集的感動瞬間。所有文章皆由 Notion API 即時同步，享受極速靜態載入體驗。
+          紀錄影視感動瞬間。分享電影、影集心得
         </p>
+
+        {/* 社群連結 */}
+        <div className="mt-3 flex flex-wrap items-center gap-3 justify-center sm:justify-start">
+          <a
+            href="https://www.facebook.com/bohsuanmoviediary"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 transition-colors dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-900/50"
+          >
+            <Film className="h-3.5 w-3.5" />
+            FB｜影視戴爾瑞
+          </a>
+          <a
+            href="https://www.instagram.com/bohsuan_movie"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-pink-50 px-3 py-1.5 text-xs font-medium text-pink-700 hover:bg-pink-100 transition-colors dark:bg-pink-950/40 dark:text-pink-300 dark:hover:bg-pink-900/50"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            IG｜bohsuan_movie
+          </a>
+        </div>
 
         {/* 分類導覽標籤 */}
         {categories.length > 0 && (
