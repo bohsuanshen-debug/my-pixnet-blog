@@ -2,6 +2,7 @@ import React from "react";
 import { getAllPosts } from "@/lib/notion";
 import PostCard from "@/components/PostCard";
 import AdSense from "@/components/AdSense";
+import FeaturedHero from "@/components/FeaturedHero";
 import { Sparkles, Film } from "lucide-react";
 
 // Vercel ISR: 每 60 秒在背景增量重新驗證一次，快取極速響應
@@ -54,26 +55,33 @@ export default async function HomePage() {
           尚未發現發布的文章，請確認 Notion Database 已正確設定並公開發布。
         </div>
       ) : (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {posts.slice(0, 4).map((post) => (
-              <PostCard key={post.id} post={post} />
-            ))}
-          </div>
+        <div className="space-y-10">
+          {/* ① 精選 Hero：最新 3 篇大圖展示 */}
+          <FeaturedHero posts={posts.slice(0, 3)} />
 
-          {/* 廣告版位 1：首頁文章清單流 (In-Feed Ad) */}
-          {posts.length >= 2 && (
-            <div className="my-8">
-              <AdSense slotType="in-feed" />
-            </div>
-          )}
+          {/* ② 分隔線 + 更多文章標題 */}
+          {posts.length > 3 && (
+            <>
+              <div className="flex items-center gap-3 pt-2">
+                <span className="inline-block h-5 w-1 rounded-full bg-amber-500 shrink-0" />
+                <h2 className="font-serif text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-200">
+                  更多文章
+                </h2>
+                <div className="flex-1 border-t border-slate-200 dark:border-slate-800" />
+              </div>
 
-          {posts.length > 4 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {posts.slice(4).map((post) => (
-                <PostCard key={post.id} post={post} />
-              ))}
-            </div>
+              {/* ③ 廣告版位：In-Feed */}
+              <div className="-mt-4">
+                <AdSense slotType="in-feed" />
+              </div>
+
+              {/* ④ 剩餘文章 2 欄卡片 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {posts.slice(3).map((post) => (
+                  <PostCard key={post.id} post={post} />
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}
