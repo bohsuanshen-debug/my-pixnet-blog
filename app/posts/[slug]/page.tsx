@@ -88,6 +88,10 @@ export default async function PostPage({
   const seriesPrefix = hasSeriesPrefix ? titleParts.slice(0, -1).join(" ｜ ") : null;
   const cleanMainTitle = hasSeriesPrefix ? titleParts[titleParts.length - 1] : post.title;
 
+  // 從標題自動擷取 4 位數上映年份 (例如 2005, 2025)
+  const matchYear = post.title.match(/(?:19|20)\d{2}/);
+  const extractedYear = matchYear ? matchYear[0] : null;
+
   // Schema.org/Article JSON-LD 結構化資料
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://moviesdiary.vercel.app";
   const postUrl = `${siteUrl}/posts/${post.slug}`;
@@ -145,6 +149,12 @@ export default async function PostPage({
               {post.category}
             </span>
           )}
+          {extractedYear && (
+            <>
+              <span className="font-semibold text-slate-700 dark:text-slate-300">({extractedYear})</span>
+              <span>•</span>
+            </>
+          )}
           <span className="flex items-center gap-1">
             <Calendar className="h-3.5 w-3.5" />
             <time dateTime={post.date}>{formatDate(post.date)}</time>
@@ -156,7 +166,7 @@ export default async function PostPage({
           </span>
         </div>
 
-        {/* 優化後的主標題區塊 */}
+        {/* 優化後的主標題區塊（單行不換行，支援橫向滾動） */}
         <div className="space-y-2">
           {seriesPrefix && (
             <p className="text-sm font-semibold tracking-wider text-amber-600 dark:text-amber-400">
