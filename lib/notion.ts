@@ -19,6 +19,9 @@ export interface BlogPost {
   originalUrl?: string;
   coverImage?: string;
   excerpt?: string;
+  watchScore?: number;     // 好看指數 (滿分 10)
+  recommendScore?: number; // 推薦指數 (滿分 10)
+  releaseYear?: string;    // 上映年份 (4 位數)
 }
 
 export interface NotionRichText {
@@ -59,7 +62,94 @@ export function extractSlug(page: any): string {
 }
 
 /**
- * 取得資料庫中所有發布的文章列表 (按日期由新到舊排序，使用 React cache 記憶化)
+ * 遞迴擷取單一 Notion Block 內的所有純文字
+ */
+function extractTextFromBlock(block: any): string {
+  const texts: string[] = [];
+
+  const collect = (node: unknown) => {
+    if (!node || typeof node !== "object") return;
+    const record = node as Record<string, unknown>;
+    if (typeof record.plain_text === "string") {
+      texts.push(record.plain_text);
+      return;
+    }
+    for (const value of Object.values(record)) {
+      if (Array.isArray(value)) {
+        value.forEach(collect);
+      } else if (value && typeof value === "object") {
+        collect(value);
+      }
+    }
+  };
+
+  collect(block);
+  return texts.join("");
+}
+
+/**
+ * 從文章標題與內文區塊自動擷取「好看指數」、「推薦指數」與「上映年份」
+ */
+function extractScoreAndYear(
+  title: string,
+  blocks: NotionBlock[]
+): {
+  watchScore?: number;
+  recommendScore?: number;
+  releaseYear?: string;
+} {
+  const lineTexts = blocks.map(extractTextFromBlock).filter(Boolean);
+  const fullText = lineTexts.join("\n");
+
+  // 1. 擷取「好看指數：5/10」
+  const watchMatch = fullText.match(
+    /好看指數[：:]\s*(\d+(?:\.\d+)?)\s*(?:\/\s*10)?/
+  );
+  const watchScore = watchMatch ? parseFloat(watchMatch[1]) : undefined;
+
+  // 2. 擷取「推薦指數：8/10」
+  const recommendMatch = fullText.match(
+    /推薦指數[：:]\s*(\d+(?:\.\d+)?)\s*(?:\/\s*10)?/
+  );
+  const recommendScore = recommendMatch
+    ? parseFloat(recommendMatch[1])
+    : undefined;
+
+  // 3. 擷取上映年份（優先標題 -> 前段括號內年份 -> 前段一般四位數年份）
+  let releaseYear: string | undefined = undefined;
+  const titleYearMatch = title.match(/(?:19|20)\d{2}/);
+  if (titleYearMatch) {
+    releaseYear = titleYearMatch[0];
+  } else {
+    const introText = lineTexts.slice(0, 10).join(" ");
+    const parenYearMatch = introText.match(
+      /[（(][^）)]*?((?:19|20)\d{2})[^）)]*?[）)]/
+    );
+    if (parenYearMatch) {
+      releaseYear = parenYearMatch[1];
+    } else {
+      const generalYearMatch = introText.match(/(?:19|20)\d{2}/);
+      if (generalYearMatch) {
+        releaseYear = generalYearMatch[0];
+      }
+    }
+  }
+
+  return {
+    watchScore:
+      watchScore !== undefined && !Number.isNaN(watchScore)
+        ? watchScore
+        : undefined,
+    recommendScore:
+      recommendScore !== undefined && !Number.isNaN(recommendScore)
+        ? recommendScore
+        : undefined,
+    releaseYear,
+  };
+}
+
+/**
+ * 取得資料庫中所有發布的文章列表（含自動擷取評分與上映年份，使用 React cache 記憶化）
  */
 export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
   if (!DATABASE_ID) {
@@ -70,17 +160,27 @@ export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
   let retries = 3;
   while (retries > 0) {
     try {
-      const response = await notion.databases.query({
-        database_id: DATABASE_ID,
-        sorts: [
-          {
-            property: "Date",
-            direction: "descending",
-          },
-        ],
-      });
+      const allPages: any[] = [];
+      let cursor: string | undefined = undefined;
 
-      const posts: BlogPost[] = response.results
+      while (true) {
+        const response: any = await notion.databases.query({
+          database_id: DATABASE_ID,
+          start_cursor: cursor,
+          sorts: [
+            {
+              property: "Date",
+              direction: "descending",
+            },
+          ],
+        });
+
+        allPages.push(...response.results);
+        if (!response.has_more) break;
+        cursor = response.next_cursor;
+      }
+
+      const posts: BlogPost[] = allPages
         .filter((page: any) => page.properties && page.object === "page")
         .map((page: any) => {
           const props = page.properties;
@@ -114,6 +214,28 @@ export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
             coverImage,
           };
         });
+
+      // 分批讀取文章內文區塊，自動擷取「好看指數」、「推薦指數」與「上映年份」
+      const BATCH_SIZE = 5;
+      for (let i = 0; i < posts.length; i += BATCH_SIZE) {
+        const batch = posts.slice(i, i + BATCH_SIZE);
+        await Promise.all(
+          batch.map(async (post) => {
+            try {
+              const blocks = await getPageBlocks(post.id);
+              const extracted = extractScoreAndYear(post.title, blocks);
+              post.watchScore = extracted.watchScore;
+              post.recommendScore = extracted.recommendScore;
+              post.releaseYear = extracted.releaseYear;
+            } catch (err) {
+              console.warn(`解析文章評分與年份失敗 (${post.title}):`, err);
+            }
+          })
+        );
+        if (i + BATCH_SIZE < posts.length) {
+          await sleep(350);
+        }
+      }
 
       return posts;
     } catch (error: any) {

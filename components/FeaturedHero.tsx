@@ -7,6 +7,9 @@ import { Calendar, ArrowRight, Film } from "lucide-react";
 
 // ─── 主 Hero 卡（最新一篇，全寬大圖）────────────────────────────────────────
 function HeroMain({ post }: { post: BlogPost }) {
+  const hasRatings =
+    post.watchScore !== undefined || post.recommendScore !== undefined;
+
   return (
     <Link
       href={`/posts/${post.slug}`}
@@ -35,7 +38,7 @@ function HeroMain({ post }: { post: BlogPost }) {
 
       {/* 文字疊層（固定在圖片底部） */}
       <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-7">
-        {/* 分類 + 日期 */}
+        {/* 分類 + 日期 + 評分徽章 */}
         <div className="flex flex-wrap items-center gap-2 mb-3">
           {post.category && (
             <span className="rounded-md bg-amber-500 px-2.5 py-0.5 text-xs font-semibold text-white shadow">
@@ -46,6 +49,22 @@ function HeroMain({ post }: { post: BlogPost }) {
             <Calendar className="h-3 w-3" />
             <time dateTime={post.date}>{formatDate(post.date)}</time>
           </span>
+
+          {hasRatings && (
+            <div className="inline-flex flex-wrap items-center gap-1.5">
+              {post.watchScore !== undefined && (
+                <span className="inline-flex items-center rounded-md border border-amber-400/40 bg-black/55 px-2 py-0.5 text-xs font-medium text-amber-300 backdrop-blur-sm">
+                  好看 {post.watchScore}/10
+                </span>
+              )}
+              {post.recommendScore !== undefined && (
+                <span className="inline-flex items-center rounded-md border border-emerald-400/40 bg-black/55 px-2 py-0.5 text-xs font-medium text-emerald-300 backdrop-blur-sm">
+                  推薦 {post.recommendScore}/10
+                </span>
+              )}
+            </div>
+          )}
+
           <span className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-amber-300 group-hover:text-amber-200 transition-colors">
             閱讀全文 <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
           </span>
@@ -76,6 +95,9 @@ function HeroMain({ post }: { post: BlogPost }) {
 
 // ─── 次要精選卡（第2、3篇，並排） ────────────────────────────────────────────
 function HeroSecondary({ post }: { post: BlogPost }) {
+  const hasRatings =
+    post.watchScore !== undefined || post.recommendScore !== undefined;
+
   return (
     <Link
       href={`/posts/${post.slug}`}
@@ -112,6 +134,22 @@ function HeroSecondary({ post }: { post: BlogPost }) {
             <Calendar className="h-2.5 w-2.5" />
             <time dateTime={post.date}>{formatDate(post.date)}</time>
           </span>
+
+          {/* 紅圈處：自動顯示好看指數與推薦指數 */}
+          {hasRatings && (
+            <div className="inline-flex flex-wrap items-center gap-1">
+              {post.watchScore !== undefined && (
+                <span className="inline-flex items-center rounded border border-amber-400/40 bg-black/55 px-1.5 py-0.5 text-[11px] font-medium text-amber-300 backdrop-blur-sm">
+                  好看 {post.watchScore}/10
+                </span>
+              )}
+              {post.recommendScore !== undefined && (
+                <span className="inline-flex items-center rounded border border-emerald-400/40 bg-black/55 px-1.5 py-0.5 text-[11px] font-medium text-emerald-300 backdrop-blur-sm">
+                  推薦 {post.recommendScore}/10
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <h3 className="font-sans text-sm sm:text-base font-semibold leading-snug text-white group-hover:text-amber-200 transition-colors line-clamp-2">
           {post.title}

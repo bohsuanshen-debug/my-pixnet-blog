@@ -6,9 +6,12 @@ import { formatDate } from "@/lib/utils";
 import { Calendar, Film, Tag } from "lucide-react";
 
 export default function PostCard({ post }: { post: BlogPost }) {
+  const hasRatings =
+    post.watchScore !== undefined || post.recommendScore !== undefined;
+
   return (
     <article className="group relative flex items-center justify-between gap-4 sm:gap-5 overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-amber-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900/60 dark:hover:border-amber-700">
-      {/* 左側：文章元資料、標題與標籤 */}
+      {/* 左側：文章元資料、標題、評分與標籤 */}
       <div className="flex flex-1 min-w-0 flex-col justify-between self-stretch">
         <div>
           {/* 分類與發布日期 */}
@@ -24,13 +27,29 @@ export default function PostCard({ post }: { post: BlogPost }) {
             </span>
           </div>
 
-          {/* 標題 (精緻 16~17px 大小，行距優雅，最多兩行截斷保證整齊) */}
+          {/* 標題 */}
           <h2 className="mt-2 font-sans text-base sm:text-[17px] font-semibold leading-snug text-slate-900 group-hover:text-amber-600 dark:text-slate-100 dark:group-hover:text-amber-400 transition-colors line-clamp-2">
             <Link href={`/posts/${post.slug}`} className="focus:outline-none">
               <span className="absolute inset-0" aria-hidden="true" />
               {post.title}
             </Link>
           </h2>
+
+          {/* 紅圈處：自動顯示好看指數與推薦指數 */}
+          {hasRatings && (
+            <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+              {post.watchScore !== undefined && (
+                <span className="inline-flex items-center rounded-md border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-300">
+                  好看 {post.watchScore}/10
+                </span>
+              )}
+              {post.recommendScore !== undefined && (
+                <span className="inline-flex items-center rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-300">
+                  推薦 {post.recommendScore}/10
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 底部標籤 */}
@@ -49,7 +68,7 @@ export default function PostCard({ post }: { post: BlogPost }) {
         )}
       </div>
 
-      {/* 右側：直式電影海報縮圖 (2:3 標準海報比例，帶圓角與 Hover 動態微放大) */}
+      {/* 右側：直式電影海報縮圖 */}
       <div className="relative h-28 w-[76px] sm:h-36 sm:w-24 shrink-0 overflow-hidden rounded-xl bg-slate-100 shadow-sm dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50">
         {post.coverImage ? (
           <Image
