@@ -184,15 +184,15 @@ function extractScoreAndYearFromContent(
 }
 
 /**
- * 取得資料庫中所有發布的文章列表（優先讀取資料庫欄位，缺漏欄位才掃描內文區塊）
+ * 輕量級文章列表查詢（僅查詢資料庫 Metadata，不掃描內文區塊，供單篇內頁與路由生成極速使用）
  */
-export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
+export const getAllPostsMeta = cache(async (): Promise<BlogPost[]> => {
   if (!DATABASE_ID) {
     console.warn("NOTION_DATABASE_ID 未設定");
     return [];
   }
 
-  let retries = 3;
+  let retries = 4;
   while (retries > 0) {
     try {
       const allPages: any[] = [];
@@ -219,7 +219,7 @@ export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
         cursor = response.next_cursor;
       }
 
-      const posts: BlogPost[] = allPages
+      return allPages
         .filter((page: any) => page.properties && page.object === "page")
         .map((page: any) => {
           const props = page.properties;
@@ -233,7 +233,6 @@ export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
           const tags = (props.Tags?.multi_select || []).map((t: any) => t.name);
           const originalUrl = props["Original URL"]?.url || "";
 
-          // 1. 優先讀取 Notion 資料庫欄位
           const watchScore = parseNumericProperty(props["好看指數"]);
           const recommendScore = parseNumericProperty(props["推薦指數"]);
           let releaseYear = parseYearProperty(props["上映年份"]);
@@ -266,70 +265,73 @@ export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
             releaseYear,
           };
         });
-
-      // 2. 僅篩選出「尚有缺漏欄位」的文章，掃描內文補齊（設 6 秒總時限確保絕不逾時）
-      const postsNeedingFallback = posts.filter(
-        (post) =>
-          post.watchScore === undefined ||
-          post.recommendScore === undefined ||
-          post.releaseYear === undefined
-      );
-
-      const startTime = Date.now();
-      const BATCH_SIZE = 6;
-      for (let i = 0; i < postsNeedingFallback.length; i += BATCH_SIZE) {
-        if (Date.now() - startTime > 6000) {
-          console.warn("內文掃描達安全時間上限，剩餘文章將於下次背景更新補齊");
-          break;
-        }
-        const batch = postsNeedingFallback.slice(i, i + BATCH_SIZE);
-        await Promise.all(
-          batch.map(async (post) => {
-            try {
-              const blocks = await getPageBlocks(post.id);
-              const extracted = extractScoreAndYearFromContent(
-                post.title,
-                blocks
-              );
-              if (post.watchScore === undefined) {
-                post.watchScore = extracted.watchScore;
-              }
-              if (post.recommendScore === undefined) {
-                post.recommendScore = extracted.recommendScore;
-              }
-              if (post.releaseYear === undefined) {
-                post.releaseYear = extracted.releaseYear;
-              }
-            } catch (err) {
-              console.warn(`解析文章評分與年份失敗 (${post.title}):`, err);
-            }
-          })
-        );
-        if (i + BATCH_SIZE < postsNeedingFallback.length) {
-          await sleep(250);
-        }
-      }
-
-      return posts;
     } catch (error: any) {
-      if (error?.status === 429 || error?.code === "rate_limited") {
-        console.warn("Notion API 觸發頻率限制，等待 1.5 秒後重試...");
-        await sleep(1500);
-        retries--;
-        continue;
+      retries--;
+      if (retries === 0) {
+        console.error("無法自 Notion 抓取文章列表:", error);
+        return [];
       }
-      console.error("無法自 Notion 抓取文章列表:", error);
-      return [];
+      await sleep(1000 * (4 - retries));
     }
   }
   return [];
 });
 
 /**
- * 依據 Slug 或 Page ID 查詢單篇文章資訊 (使用 React cache 記憶化)
+ * 首頁專用完整文章列表（優先讀取資料庫欄位，缺漏欄位才掃描內文區塊）
+ */
+export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
+  const basePosts = await getAllPostsMeta();
+  const posts = basePosts.map((p) => ({ ...p }));
+
+  const postsNeedingFallback = posts.filter(
+    (post) =>
+      post.watchScore === undefined ||
+      post.recommendScore === undefined ||
+      post.releaseYear === undefined
+  );
+
+  const startTime = Date.now();
+  const BATCH_SIZE = 4;
+  for (let i = 0; i < postsNeedingFallback.length; i += BATCH_SIZE) {
+    if (Date.now() - startTime > 5500) {
+      console.warn("內文掃描達安全時間上限，剩餘文章將於下次背景更新補齊");
+      break;
+    }
+    const batch = postsNeedingFallback.slice(i, i + BATCH_SIZE);
+    await Promise.all(
+      batch.map(async (post) => {
+        try {
+          const blocks = await getPageBlocks(post.id);
+          if (blocks.length === 0) return;
+          const extracted = extractScoreAndYearFromContent(post.title, blocks);
+          if (post.watchScore === undefined) {
+            post.watchScore = extracted.watchScore;
+          }
+          if (post.recommendScore === undefined) {
+            post.recommendScore = extracted.recommendScore;
+          }
+          if (post.releaseYear === undefined) {
+            post.releaseYear = extracted.releaseYear;
+          }
+        } catch (err) {
+          console.warn(`解析文章評分與年份失敗 (${post.title}):`, err);
+        }
+      })
+    );
+    if (i + BATCH_SIZE < postsNeedingFallback.length) {
+      await sleep(300);
+    }
+  }
+
+  return posts;
+});
+
+/**
+ * 依據 Slug 或 Page ID 查詢單篇文章基本資訊（使用輕量查詢，絕不因掃描全站內文而耗盡 API 額度）
  */
 export const getPostBySlug = cache(async (slug: string): Promise<BlogPost | null> => {
-  const allPosts = await getAllPosts();
+  const allPosts = await getAllPostsMeta();
   const matched = allPosts.find(
     (p) => p.slug === slug || p.id === slug || p.id.replace(/-/g, "") === slug
   );
@@ -337,14 +339,14 @@ export const getPostBySlug = cache(async (slug: string): Promise<BlogPost | null
 });
 
 /**
- * 遞迴/分頁獲取文章內的所有區塊 (Notion API 單次最多 100 筆，支援自動重試與 React cache)
+ * 遞迴/分頁獲取單篇文章內的所有區塊（含指數退避重試機制，防止偶發網路或限流導致空白內文）
  */
 export const getPageBlocks = cache(async (blockId: string): Promise<NotionBlock[]> => {
   const blocks: NotionBlock[] = [];
   let cursor: string | undefined = undefined;
 
   while (true) {
-    let retries = 3;
+    let retries = 5;
     let success = false;
 
     while (retries > 0) {
@@ -368,14 +370,18 @@ export const getPageBlocks = cache(async (blockId: string): Promise<NotionBlock[
         success = true;
         break;
       } catch (error: any) {
-        if (error?.status === 429 || error?.code === "rate_limited") {
-          console.warn("Notion 區塊讀取頻率限制，等待 1.5 秒重試...");
-          await sleep(1500);
-          retries--;
-        } else {
-          console.error(`獲取 Notion 區塊失敗 (Block ID: ${blockId}):`, error);
+        retries--;
+        const attempt = 5 - retries;
+        console.warn(
+          `Notion 區塊讀取第 ${attempt} 次重試 (Block ID: ${blockId}):`,
+          error?.code || error?.status || error?.message
+        );
+        if (retries === 0) {
+          console.error(`獲取 Notion 區塊最終失敗 (Block ID: ${blockId}):`, error);
           return blocks;
         }
+        // 指數退避等待：800ms -> 1600ms -> 2400ms -> 3200ms
+        await sleep(800 * attempt);
       }
     }
 

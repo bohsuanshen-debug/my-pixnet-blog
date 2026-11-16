@@ -2,7 +2,7 @@ import React from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getAllPosts, getPostBySlug, getPageBlocks } from "@/lib/notion";
+import { getAllPostsMeta, getPostBySlug, getPageBlocks } from "@/lib/notion";
 import NotionRenderer from "@/components/NotionRenderer";
 import AdSense from "@/components/AdSense";
 import { formatDate, estimateReadingTime } from "@/lib/utils";
@@ -54,7 +54,7 @@ function extractMovieYear(title: string, blocks: unknown[]): string | null {
 
 // 建置時預先為最新 20 篇熱門文章建立靜態 HTML，其餘文章由 Vercel ISR 首次請求時動態生成並快取
 export async function generateStaticParams() {
-  const posts = await getAllPosts();
+  const posts = await getAllPostsMeta();
   return posts.slice(0, 20).map((post) => ({
     slug: post.slug,
   }));
@@ -113,8 +113,13 @@ export default async function PostPage({
     notFound();
   }
 
-  // 取得文章所有 Notion Blocks
-  const blocks = await getPageBlocks(post.id);
+  // 取得文章所有 Notion Blocks（若首次回傳為空，短暫等待後再補抓一次確保非暫時性限流）
+  let blocks = await getPageBlocks(post.id);
+  if (blocks.length === 0) {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    blocks = await getPageBlocks(post.id);
+  }
+
   const readingTime = estimateReadingTime(blocks);
 
   // 自動拆分「影評｜電影日記簿｜《片名》副標」結構，避免標題過長導致片名斷行
@@ -128,8 +133,8 @@ export default async function PostPage({
   const seriesPrefix = hasSeriesPrefix ? titleParts.slice(0, -1).join(" ｜ ") : null;
   const cleanMainTitle = hasSeriesPrefix ? titleParts[titleParts.length - 1] : post.title;
 
-  // 從標題或文章內文前段自動擷取上映年份
-  const extractedYear = extractMovieYear(post.title, blocks);
+  // 優先使用資料庫上映年份，若無則從標題或文章內文前段自動擷取
+  const extractedYear = post.releaseYear || extractMovieYear(post.title, blocks);
 
   // Schema.org/Article JSON-LD 結構化資料
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://moviesdiary.vercel.app";
