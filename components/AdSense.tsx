@@ -49,55 +49,44 @@ export default function AdSense({
   const config = SLOT_CONFIG[slotType];
   const clientId = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID || "";
   const activeSlotId = slotId || config.defaultSlotId;
-  const isDev = process.env.NODE_ENV === "development" || !clientId;
+  const isDev = process.env.NODE_ENV === "development";
 
   useEffect(() => {
-    // 僅在生產環境且有設定 Client ID 時執行 AdSense 推播
-    if (!isDev) {
+    // 僅在生產環境且有設定真實 Client ID 時執行 AdSense 推播
+    if (!isDev && clientId) {
       try {
         ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
       } catch (err) {
         console.error("AdSense push error:", err);
       }
     }
-  }, [isDev]);
+  }, [isDev, clientId]);
+
+  // 審核期間關鍵：若無設定 Client ID，在生產環境完全不渲染空框，避免被 Google 判定空白頁面或垃圾內容
+  if (!clientId && !isDev) {
+    return null;
+  }
+
+  if (isDev && !clientId) {
+    return null; // 開發環境亦不渲染佔位虛框，保證預覽純淨
+  }
 
   return (
     <div
       className={`my-8 w-full overflow-hidden rounded-xl bg-slate-50/70 p-3 text-center dark:bg-slate-900/40 border border-dashed border-slate-200 dark:border-slate-800 ${config.minHeight} flex flex-col items-center justify-center transition-all ${className}`}
       aria-label="Advertisement"
     >
-      {/* 標籤小提示 */}
       <span className="mb-1 text-[11px] font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500">
         贊助廣告 / Advertisement
       </span>
-
-      {isDev ? (
-        // 開發環境預覽佔位符 (防止累積版面位移 CLS)
-        <div className="flex flex-col items-center justify-center py-4 text-xs text-slate-400 dark:text-slate-500">
-          <div className="font-semibold text-slate-600 dark:text-slate-300">
-            {config.label}
-          </div>
-          <div className="mt-1 font-mono text-[11px] opacity-80">
-            Slot ID: {activeSlotId} | Format: {format}
-          </div>
-          <div className="mt-1 text-[10px] text-amber-600/90 dark:text-amber-400/90">
-            (設定 NEXT_PUBLIC_ADSENSE_CLIENT_ID 後於正式環境自動呈現真實廣告)
-          </div>
-        </div>
-      ) : (
-        // 正式環境 AdSense 非同步程式碼
-        <>
-          <ins
-            className="adsbygoogle"
-            style={{ display: "block" }}
-            data-ad-client={clientId}
-            data-ad-slot={activeSlotId}
-            data-ad-format={format}
-            data-full-width-responsive={responsive ? "true" : "false"}
-          />
-        </>
-      )}
+      <ins
+        className="adsbygoogle"
+        style={{ display: "block" }}
+        data-ad-client={clientId}
+        data-ad-slot={activeSlotId}
+        data-ad-format={format}
+        data-full-width-responsive={responsive ? "true" : "false"}
+      />
     </div>
   );
 }

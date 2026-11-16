@@ -23,7 +23,7 @@ export default function Header() {
           </span>
         </Link>
 
-        <nav className="flex items-center gap-6 text-sm font-medium text-slate-600 dark:text-slate-400">
+        <nav className="flex items-center gap-4 sm:gap-6 text-sm font-medium text-slate-600 dark:text-slate-400">
           <Link
             href="/"
             className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
@@ -31,11 +31,22 @@ export default function Header() {
             首頁
           </Link>
           <Link
-            href="/sitemap.xml"
-            target="_blank"
+            href="/about"
+            className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+          >
+            關於我們
+          </Link>
+          <Link
+            href="/contact"
             className="hidden sm:inline hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
           >
-            Sitemap
+            聯絡我們
+          </Link>
+          <Link
+            href="/privacy"
+            className="hidden md:inline hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+          >
+            隱私權政策
           </Link>
         </nav>
       </div>
