@@ -1,8 +1,7 @@
 import React from "react";
 import { getAllPosts } from "@/lib/notion";
-import PostCard from "@/components/PostCard";
-import AdSense from "@/components/AdSense";
 import FeaturedHero from "@/components/FeaturedHero";
+import PostFilterSection from "@/components/PostFilterSection";
 import { Sparkles, Film } from "lucide-react";
 
 // Vercel ISR: 每 60 秒在背景增量重新驗證一次，快取極速響應
@@ -81,30 +80,8 @@ export default async function HomePage() {
           {/* ① 精選 Hero：最新 3 篇大圖展示 */}
           <FeaturedHero posts={posts.slice(0, 3)} />
 
-          {/* ② 分隔線 + 更多文章標題 */}
-          {posts.length > 3 && (
-            <>
-              <div className="flex items-center gap-3 pt-2">
-                <span className="inline-block h-5 w-1 rounded-full bg-amber-500 shrink-0" />
-                <h2 className="font-serif text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-200">
-                  更多文章
-                </h2>
-                <div className="flex-1 border-t border-slate-200 dark:border-slate-800" />
-              </div>
-
-              {/* ③ 廣告版位：In-Feed */}
-              <div className="-mt-4">
-                <AdSense slotType="in-feed" />
-              </div>
-
-              {/* ④ 剩餘文章 2 欄卡片 */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {posts.slice(3).map((post) => (
-                  <PostCard key={post.id} post={post} />
-                ))}
-              </div>
-            </>
-          )}
+          {/* ②～④ 更多文章（含分類篩選、日期排序、廣告與原有 PostCard 列表） */}
+          {posts.length > 3 && <PostFilterSection posts={posts.slice(3)} />}
         </div>
       )}
     </div>

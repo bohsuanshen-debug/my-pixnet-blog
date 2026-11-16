@@ -1,40 +1,32 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import Link from "next/link";
-import { Calendar, Film, ArrowUpDown } from "lucide-react";
-import { formatDate } from "@/lib/utils";
+import PostCard from "@/components/PostCard";
+import AdSense from "@/components/AdSense";
+import { ArrowUpDown } from "lucide-react";
 
-export interface PostItem {
-  id: string;
-  title: string;
-  slug: string;
-  date: string;
-  category?: string;
-  coverImage?: string;
-  excerpt?: string;
-}
+type PostType = React.ComponentProps<typeof PostCard>["post"];
 
-export default function PostFilterSection({ posts }: { posts: PostItem[] }) {
+export default function PostFilterSection({ posts }: { posts: PostType[] }) {
   const [selectedCategory, setSelectedCategory] = useState<string>("全部");
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
 
-  // 自動萃取所有不重複的文章分類
+  // 自動從文章中取得不重複的分類
   const categories = useMemo(() => {
-    const validCategories = posts
-      .map((post) => post.category)
+    const validCats = posts
+      .map((p) => p.category)
       .filter((cat): cat is string => Boolean(cat && cat.trim() !== ""));
-    return ["全部", ...Array.from(new Set(validCategories))];
+    return ["全部", ...Array.from(new Set(validCats))];
   }, [posts]);
 
-  // 執行分類篩選與日期排序
+  // 依據分類與時間進行篩選與排序
   const filteredPosts = useMemo(() => {
-    const filtered =
+    const result =
       selectedCategory === "全部"
         ? [...posts]
-        : posts.filter((post) => post.category === selectedCategory);
+        : posts.filter((p) => p.category === selectedCategory);
 
-    return filtered.sort((a, b) => {
+    return result.sort((a, b) => {
       const timeA = new Date(a.date).getTime() || 0;
       const timeB = new Date(b.date).getTime() || 0;
       return sortOrder === "newest" ? timeB - timeA : timeA - timeB;
@@ -42,117 +34,74 @@ export default function PostFilterSection({ posts }: { posts: PostItem[] }) {
   }, [posts, selectedCategory, sortOrder]);
 
   return (
-    <section className="mt-10">
-      {/* 標題與排序切換列 */}
-      <div className="mb-6 flex flex-col justify-between gap-4 border-b border-slate-200/80 pb-4 dark:border-slate-800 sm:flex-row sm:items-center">
-        <h2 className="flex items-center gap-2 text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-          <span className="text-amber-600 dark:text-amber-400">｜</span>
-          <span>更多文章</span>
-          <span className="ml-1 text-xs font-normal text-slate-400">
-            ({filteredPosts.length})
-          </span>
-        </h2>
+    <>
+      {/* ② 分隔線 + 更多文章標題 + 篩選與排序控制列（原本紅圈空白處） */}
+      <div className="flex flex-col gap-4 pt-2 border-b border-slate-200/80 pb-4 dark:border-slate-800">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="inline-block h-5 w-1 rounded-full bg-amber-500 shrink-0" />
+            <h2 className="font-serif text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-200">
+              更多文章
+            </h2>
+            <span className="text-xs text-slate-400">
+              ({filteredPosts.length})
+            </span>
+          </div>
 
-        <button
-          type="button"
-          onClick={() =>
-            setSortOrder((prev) => (prev === "newest" ? "oldest" : "newest"))
-          }
-          className="inline-flex items-center gap-1.5 self-start rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 sm:self-auto"
-        >
-          <ArrowUpDown className="h-3.5 w-3.5" />
-          <span>{sortOrder === "newest" ? "最新發布優先" : "最早發布優先"}</span>
-        </button>
+          {/* 排序切換按鈕 */}
+          <button
+            type="button"
+            onClick={() =>
+              setSortOrder((prev) => (prev === "newest" ? "oldest" : "newest"))
+            }
+            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-200 transition-colors dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+          >
+            <ArrowUpDown className="h-3.5 w-3.5" />
+            <span>{sortOrder === "newest" ? "最新優先" : "最早優先"}</span>
+          </button>
+        </div>
+
+        {/* 分類篩選膠囊按鈕 */}
+        {categories.length > 1 && (
+          <div className="flex flex-wrap items-center gap-2">
+            {categories.map((cat) => {
+              const isActive = selectedCategory === cat;
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`rounded-full px-3.5 py-1 text-xs font-medium transition-all ${
+                    isActive
+                      ? "bg-amber-600 text-white shadow-sm"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  }`}
+                >
+                  {cat}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* 分類膠囊篩選按鈕 */}
-      <div className="mb-8 flex flex-wrap gap-2">
-        {categories.map((category) => {
-          const isActive = selectedCategory === category;
-          return (
-            <button
-              key={category}
-              type="button"
-              onClick={() => setSelectedCategory(category)}
-              className={`rounded-full px-4 py-1.5 text-xs font-medium transition-all ${
-                isActive
-                  ? "bg-amber-600 text-white shadow-sm"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-              }`}
-            >
-              {category}
-            </button>
-          );
-        })}
+      {/* ③ 保留原本的廣告版位：In-Feed */}
+      <div className="-mt-4">
+        <AdSense slotType="in-feed" />
       </div>
 
-      {/* 文章列表網格 */}
+      {/* ④ 沿用你原本的 PostCard 2 欄卡片 */}
       {filteredPosts.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-200 py-12 text-center text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
+        <div className="rounded-2xl border border-dashed border-slate-300 p-10 text-center text-sm text-slate-500 dark:border-slate-800">
           目前沒有符合「{selectedCategory}」分類的文章。
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filteredPosts.map((post) => (
-            <article
-              key={post.id}
-              className="group flex flex-col overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm transition-all hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
-            >
-              {post.coverImage && (
-                <Link
-                  href={`/posts/${post.slug}`}
-                  className="block aspect-video w-full overflow-hidden bg-slate-100 dark:bg-slate-800"
-                >
-                  <img
-                    src={post.coverImage}
-                    alt={post.title}
-                    loading="lazy"
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                </Link>
-              )}
-
-              <div className="flex flex-1 flex-col justify-between p-5">
-                <div>
-                  <div className="mb-2 flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-                    {post.category && (
-                      <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-2 py-0.5 font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-                        <Film className="h-3 w-3" />
-                        {post.category}
-                      </span>
-                    )}
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-3.5 w-3.5" />
-                      <time dateTime={post.date}>{formatDate(post.date)}</time>
-                    </span>
-                  </div>
-
-                  <Link href={`/posts/${post.slug}`}>
-                    <h3 className="line-clamp-2 font-serif text-base font-bold text-slate-900 transition-colors group-hover:text-amber-600 dark:text-slate-100 dark:group-hover:text-amber-400">
-                      {post.title}
-                    </h3>
-                  </Link>
-
-                  {post.excerpt && (
-                    <p className="mt-2 line-clamp-2 text-xs text-slate-600 dark:text-slate-400">
-                      {post.excerpt}
-                    </p>
-                  )}
-                </div>
-
-                <div className="mt-4 flex justify-end border-t border-slate-100 pt-3 dark:border-slate-800">
-                  <Link
-                    href={`/posts/${post.slug}`}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 hover:text-amber-700 dark:text-amber-400"
-                  >
-                    閱讀全文 →
-                  </Link>
-                </div>
-              </div>
-            </article>
+            <PostCard key={post.id} post={post} />
           ))}
         </div>
       )}
-    </section>
+    </>
   );
 }
