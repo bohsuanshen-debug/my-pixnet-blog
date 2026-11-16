@@ -175,22 +175,6 @@ export default async function PostPage({
 
       {/* 廣告版位 4：文章底部廣告 (Bottom Banner Ad) */}
       <AdSense slotType="article-bottom" />
-
-      {/* 痞客邦原出處宣告 */}
-      {post.originalUrl && (
-        <aside className="mt-10 rounded-xl border border-slate-200/80 bg-slate-50 p-4 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-400 flex items-center justify-between">
-          <span>本文最初發表於痞客邦部落格 (Pixnet)</span>
-          <a
-            href={post.originalUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-amber-600 hover:underline dark:text-amber-400"
-          >
-            <span>檢視原始文章</span>
-            <ExternalLink className="h-3 w-3" />
-          </a>
-        </aside>
-      )}
     </div>
   );
 }
