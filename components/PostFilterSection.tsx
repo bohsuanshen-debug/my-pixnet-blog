@@ -4,7 +4,14 @@ import React, { useState, useMemo, useRef, useEffect } from "react";
 import PostCard from "@/components/PostCard";
 import AdSense from "@/components/AdSense";
 import { BlogPost } from "@/lib/notion";
-import { ArrowUpDown, ChevronDown, Check } from "lucide-react";
+import {
+  ArrowUpDown,
+  ChevronDown,
+  Check,
+  FolderOpen,
+  CalendarRange,
+  RotateCcw,
+} from "lucide-react";
 
 type SortOption =
   | "date-desc"
@@ -66,7 +73,7 @@ function compareNullableScore(
   const hasA = typeof scoreA === "number" && !Number.isNaN(scoreA);
   const hasB = typeof scoreB === "number" && !Number.isNaN(scoreB);
   if (!hasA && !hasB) return 0;
-  if (!hasA) return 1; // 尚未設定評分的文章排在最後
+  if (!hasA) return 1;
   if (!hasB) return -1;
   return direction === "desc" ? scoreB - scoreA : scoreA - scoreB;
 }
@@ -75,17 +82,20 @@ export default function PostFilterSection({ posts }: { posts: BlogPost[] }) {
   const [selectedCategory, setSelectedCategory] = useState<string>("全部");
   const [selectedYear, setSelectedYear] = useState<string>("全部");
   const [sortBy, setSortBy] = useState<SortOption>("date-desc");
-  const [sortMenuOpen, setSortMenuOpen] = useState(false);
-  const sortDropdownRef = useRef<HTMLDivElement>(null);
+  const [openMenu, setOpenMenu] = useState<"category" | "year" | "sort" | null>(
+    null
+  );
 
-  // 點擊外部自動關閉排序下拉選單
+  const controlsRef = useRef<HTMLDivElement>(null);
+
+  // 點擊選單外部自動收合所有下拉選單
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        sortDropdownRef.current &&
-        !sortDropdownRef.current.contains(event.target as Node)
+        controlsRef.current &&
+        !controlsRef.current.contains(event.target as Node)
       ) {
-        setSortMenuOpen(false);
+        setOpenMenu(null);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -156,41 +166,153 @@ export default function PostFilterSection({ posts }: { posts: BlogPost[] }) {
 
   const currentSort =
     SORT_OPTIONS.find((opt) => opt.value === sortBy) || SORT_OPTIONS[0];
+  const hasActiveFilter =
+    selectedCategory !== "全部" || selectedYear !== "全部";
 
   return (
     <>
-      {/* ② 分隔線 + 更多文章標題 + 黃圈處排序選單 + 雙重篩選器 */}
-      <div className="flex flex-col gap-3.5 pt-2 border-b border-slate-200/80 pb-5 dark:border-slate-800">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="inline-block h-5 w-1 rounded-full bg-amber-500 shrink-0" />
-            <h2 className="font-serif text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-200">
-              更多文章
-            </h2>
-            <span className="text-xs text-slate-400">
-              ({filteredPosts.length})
-            </span>
-          </div>
+      {/* ② 分隔線 + 更多文章標題 + 三合一精簡下拉控制列 */}
+      <div
+        ref={controlsRef}
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3.5 pt-2 border-b border-slate-200/80 pb-4 dark:border-slate-800"
+      >
+        {/* 左側標題 */}
+        <div className="flex items-center gap-3">
+          <span className="inline-block h-5 w-1 rounded-full bg-amber-500 shrink-0" />
+          <h2 className="font-serif text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-200">
+            更多文章
+          </h2>
+          <span className="text-xs text-slate-400">
+            ({filteredPosts.length})
+          </span>
+        </div>
 
-          {/* 黃圈處：整合發布時間與「沈伯的評分排序」下拉選單 */}
-          <div className="relative" ref={sortDropdownRef}>
+        {/* 右側三個統一風格下拉選單：分類 / 上映年份 / 排序 */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* 1. 分類下拉選單 */}
+          {categories.length > 1 && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() =>
+                  setOpenMenu((prev) =>
+                    prev === "category" ? null : "category"
+                  )
+                }
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  selectedCategory !== "全部"
+                    ? "border-amber-500/40 bg-amber-50 text-amber-800 dark:border-amber-400/30 dark:bg-amber-950/50 dark:text-amber-300"
+                    : "border-slate-200/80 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                }`}
+              >
+                <FolderOpen className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                <span>
+                  {selectedCategory === "全部" ? "全部分類" : selectedCategory}
+                </span>
+                <ChevronDown
+                  className={`h-3.5 w-3.5 opacity-60 transition-transform ${
+                    openMenu === "category" ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {openMenu === "category" && (
+                <div className="absolute left-0 sm:right-0 sm:left-auto z-30 mt-2 w-40 origin-top rounded-xl border border-slate-200/80 bg-white py-1.5 shadow-lg ring-1 ring-black/5 dark:border-slate-800 dark:bg-slate-900">
+                  <div className="px-3 py-1 text-[11px] font-semibold tracking-wider text-slate-400">
+                    文章分類
+                  </div>
+                  {categories.map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategory(cat);
+                        setOpenMenu(null);
+                      }}
+                      className="flex w-full items-center justify-between px-3.5 py-2 text-left text-xs text-slate-700 transition-colors hover:bg-amber-50 hover:text-amber-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-amber-400"
+                    >
+                      <span>{cat === "全部" ? "全部分類" : cat}</span>
+                      {selectedCategory === cat && (
+                        <Check className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 2. 上映年份下拉選單（支援多年份內捲動） */}
+          {releaseYears.length > 1 && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() =>
+                  setOpenMenu((prev) => (prev === "year" ? null : "year"))
+                }
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  selectedYear !== "全部"
+                    ? "border-amber-500/40 bg-amber-50 text-amber-800 dark:border-amber-400/30 dark:bg-amber-950/50 dark:text-amber-300"
+                    : "border-slate-200/80 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                }`}
+              >
+                <CalendarRange className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                <span>
+                  {selectedYear === "全部" ? "上映年份" : `${selectedYear} 年`}
+                </span>
+                <ChevronDown
+                  className={`h-3.5 w-3.5 opacity-60 transition-transform ${
+                    openMenu === "year" ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {openMenu === "year" && (
+                <div className="absolute left-0 sm:right-0 sm:left-auto z-30 mt-2 max-h-64 w-36 overflow-y-auto origin-top rounded-xl border border-slate-200/80 bg-white py-1.5 shadow-lg ring-1 ring-black/5 dark:border-slate-800 dark:bg-slate-900">
+                  <div className="px-3 py-1 text-[11px] font-semibold tracking-wider text-slate-400">
+                    上映年份
+                  </div>
+                  {releaseYears.map((year) => (
+                    <button
+                      key={year}
+                      type="button"
+                      onClick={() => {
+                        setSelectedYear(year);
+                        setOpenMenu(null);
+                      }}
+                      className="flex w-full items-center justify-between px-3.5 py-2 text-left text-xs text-slate-700 transition-colors hover:bg-amber-50 hover:text-amber-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-amber-400"
+                    >
+                      <span>{year === "全部" ? "全部年份" : `${year} 年`}</span>
+                      {selectedYear === year && (
+                        <Check className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 3. 排序下拉選單（發布日期 + 沈伯的評分排序） */}
+          <div className="relative">
             <button
               type="button"
-              onClick={() => setSortMenuOpen((prev) => !prev)}
+              onClick={() =>
+                setOpenMenu((prev) => (prev === "sort" ? null : "sort"))
+              }
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200/80 bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-200 transition-colors dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
             >
               <ArrowUpDown className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
               <span>{currentSort.shortLabel}</span>
               <ChevronDown
                 className={`h-3.5 w-3.5 opacity-60 transition-transform ${
-                  sortMenuOpen ? "rotate-180" : ""
+                  openMenu === "sort" ? "rotate-180" : ""
                 }`}
               />
             </button>
 
-            {sortMenuOpen && (
+            {openMenu === "sort" && (
               <div className="absolute right-0 z-30 mt-2 w-52 origin-top-right rounded-xl border border-slate-200/80 bg-white py-2 shadow-lg ring-1 ring-black/5 dark:border-slate-800 dark:bg-slate-900">
-                {/* 群組 1：發布日期 */}
                 <div className="px-3 py-1 text-[11px] font-semibold tracking-wider text-slate-400">
                   發布日期
                 </div>
@@ -201,7 +323,7 @@ export default function PostFilterSection({ posts }: { posts: BlogPost[] }) {
                       type="button"
                       onClick={() => {
                         setSortBy(opt.value);
-                        setSortMenuOpen(false);
+                        setOpenMenu(null);
                       }}
                       className="flex w-full items-center justify-between px-4 py-2 text-left text-xs text-slate-700 transition-colors hover:bg-amber-50 hover:text-amber-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-amber-400"
                     >
@@ -215,7 +337,6 @@ export default function PostFilterSection({ posts }: { posts: BlogPost[] }) {
 
                 <div className="my-1.5 border-t border-slate-100 dark:border-slate-800" />
 
-                {/* 群組 2：沈伯的評分排序 */}
                 <div className="px-3 py-1 text-[11px] font-semibold tracking-wider text-amber-600 dark:text-amber-400">
                   沈伯的評分排序
                 </div>
@@ -227,7 +348,7 @@ export default function PostFilterSection({ posts }: { posts: BlogPost[] }) {
                     type="button"
                     onClick={() => {
                       setSortBy(opt.value);
-                      setSortMenuOpen(false);
+                      setOpenMenu(null);
                     }}
                     className="flex w-full items-center justify-between px-4 py-2 text-left text-xs text-slate-700 transition-colors hover:bg-amber-50 hover:text-amber-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-amber-400"
                   >
@@ -240,59 +361,24 @@ export default function PostFilterSection({ posts }: { posts: BlogPost[] }) {
               </div>
             )}
           </div>
+
+          {/* 清除篩選快捷按鈕（僅在有篩選條件時顯示） */}
+          {hasActiveFilter && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedCategory("全部");
+                setSelectedYear("全部");
+                setOpenMenu(null);
+              }}
+              title="重設篩選條件"
+              className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors dark:hover:bg-slate-800 dark:hover:text-slate-300"
+            >
+              <RotateCcw className="h-3 w-3" />
+              <span>重設</span>
+            </button>
+          )}
         </div>
-
-        {/* 篩選列 1：文章分類 */}
-        {categories.length > 1 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-slate-400 mr-0.5">
-              分類：
-            </span>
-            {categories.map((cat) => {
-              const isActive = selectedCategory === cat;
-              return (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`rounded-full px-3.5 py-1 text-xs font-medium transition-all ${
-                    isActive
-                      ? "bg-amber-600 text-white shadow-sm"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-                  }`}
-                >
-                  {cat}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* 篩選列 2：上映年份（自動從文章內擷取） */}
-        {releaseYears.length > 1 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-slate-400 mr-0.5">
-              上映年份：
-            </span>
-            {releaseYears.map((year) => {
-              const isActive = selectedYear === year;
-              return (
-                <button
-                  key={year}
-                  type="button"
-                  onClick={() => setSelectedYear(year)}
-                  className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
-                    isActive
-                      ? "bg-slate-800 text-white shadow-sm dark:bg-amber-500 dark:text-slate-950"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-                  }`}
-                >
-                  {year === "全部" ? "全部年份" : `${year}`}
-                </button>
-              );
-            })}
-          </div>
-        )}
       </div>
 
       {/* ③ 廣告版位：In-Feed */}
