@@ -54,12 +54,12 @@ function HeroMain({ post }: { post: BlogPost }) {
             <div className="inline-flex flex-wrap items-center gap-1.5">
               {post.watchScore !== undefined && (
                 <span className="inline-flex items-center rounded-md border border-amber-400/40 bg-black/55 px-2 py-0.5 text-xs font-medium text-amber-300 backdrop-blur-sm">
-                  好看 {post.watchScore}/10
+                  超主觀評分 {post.watchScore}/10
                 </span>
               )}
               {post.recommendScore !== undefined && (
                 <span className="inline-flex items-center rounded-md border border-emerald-400/40 bg-black/55 px-2 py-0.5 text-xs font-medium text-emerald-300 backdrop-blur-sm">
-                  推薦 {post.recommendScore}/10
+                  爆米花指數 {post.recommendScore}/10
                 </span>
               )}
             </div>
@@ -135,17 +135,17 @@ function HeroSecondary({ post }: { post: BlogPost }) {
             <time dateTime={post.date}>{formatDate(post.date)}</time>
           </span>
 
-          {/* 紅圈處：自動顯示好看指數與推薦指數 */}
+          {/* 自動顯示超主觀評分與爆米花指數 */}
           {hasRatings && (
             <div className="inline-flex flex-wrap items-center gap-1">
               {post.watchScore !== undefined && (
                 <span className="inline-flex items-center rounded border border-amber-400/40 bg-black/55 px-1.5 py-0.5 text-[11px] font-medium text-amber-300 backdrop-blur-sm">
-                  好看 {post.watchScore}/10
+                  超主觀評分 {post.watchScore}/10
                 </span>
               )}
               {post.recommendScore !== undefined && (
                 <span className="inline-flex items-center rounded border border-emerald-400/40 bg-black/55 px-1.5 py-0.5 text-[11px] font-medium text-emerald-300 backdrop-blur-sm">
-                  推薦 {post.recommendScore}/10
+                  爆米花指數 {post.recommendScore}/10
                 </span>
               )}
             </div>

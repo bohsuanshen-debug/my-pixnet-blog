@@ -19,8 +19,8 @@ export interface BlogPost {
   originalUrl?: string;
   coverImage?: string;
   excerpt?: string;
-  watchScore?: number;     // 好看指數 (滿分 10)
-  recommendScore?: number; // 推薦指數 (滿分 10)
+  watchScore?: number;     // 超主觀評分 (滿分 10)
+  recommendScore?: number; // 爆米花指數 (滿分 10)
   releaseYear?: string;    // 上映年份 (4 位數)
 }
 
@@ -149,9 +149,13 @@ export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
           const tags = (props.Tags?.multi_select || []).map((t: any) => t.name);
           const originalUrl = props["Original URL"]?.url || "";
 
-          // 直接從 Notion 資料庫欄位讀取評分與上映年份
-          const watchScore = parseNumericProperty(props["好看指數"]);
-          const recommendScore = parseNumericProperty(props["推薦指數"]);
+          // 直接從 Notion 資料庫欄位讀取「超主觀評分」、「爆米花指數」與「上映年份」（兼容舊欄位名）
+          const watchScore =
+            parseNumericProperty(props["超主觀評分"]) ??
+            parseNumericProperty(props["好看指數"]);
+          const recommendScore =
+            parseNumericProperty(props["爆米花指數"]) ??
+            parseNumericProperty(props["推薦指數"]);
           let releaseYear = parseYearProperty(props["上映年份"]);
 
           // 若資料庫未填寫上映年份，順手從文章標題比對（純字串運算，不耗費 API）
@@ -222,43 +226,3 @@ export const getPageBlocks = cache(async (blockId: string): Promise<NotionBlock[
 
     while (retries > 0) {
       try {
-        const listParams: any = {
-          block_id: blockId,
-          page_size: 100,
-        };
-        if (cursor) {
-          listParams.start_cursor = cursor;
-        }
-
-        const response: any = await notion.blocks.children.list(listParams);
-
-        blocks.push(...response.results);
-
-        if (!response.has_more || !response.next_cursor) {
-          return blocks;
-        }
-        cursor = response.next_cursor;
-        success = true;
-        break;
-      } catch (error: any) {
-        retries--;
-        const attempt = 5 - retries;
-        console.warn(
-          `Notion 區塊讀取第 ${attempt} 次重試 (Block ID: ${blockId}):`,
-          error?.code || error?.status || error?.message
-        );
-        if (retries === 0) {
-          console.error(`獲取 Notion 區塊最終失敗 (Block ID: ${blockId}):`, error);
-          return blocks;
-        }
-        await sleep(800 * attempt);
-      }
-    }
-
-    if (!success) {
-      break;
-    }
-  }
-
-  return blocks;
-});

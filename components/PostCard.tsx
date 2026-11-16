@@ -35,17 +35,17 @@ export default function PostCard({ post }: { post: BlogPost }) {
             </Link>
           </h2>
 
-          {/* 紅圈處：自動顯示好看指數與推薦指數 */}
+          {/* 自動顯示超主觀評分與爆米花指數 */}
           {hasRatings && (
             <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
               {post.watchScore !== undefined && (
                 <span className="inline-flex items-center rounded-md border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-300">
-                  好看 {post.watchScore}/10
+                  超主觀評分 {post.watchScore}/10
                 </span>
               )}
               {post.recommendScore !== undefined && (
                 <span className="inline-flex items-center rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-300">
-                  推薦 {post.recommendScore}/10
+                  爆米花指數 {post.recommendScore}/10
                 </span>
               )}
             </div>

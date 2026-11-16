@@ -41,26 +41,26 @@ const SORT_OPTIONS: {
   },
   {
     value: "watch-desc",
-    label: "好看指數：由高到低",
-    shortLabel: "好看指數 (高→低)",
+    label: "超主觀評分：由高到低",
+    shortLabel: "超主觀評分 (高→低)",
     group: "沈伯的評分排序",
   },
   {
     value: "watch-asc",
-    label: "好看指數：由低到高",
-    shortLabel: "好看指數 (低→高)",
+    label: "超主觀評分：由低到高",
+    shortLabel: "超主觀評分 (低→高)",
     group: "沈伯的評分排序",
   },
   {
     value: "recommend-desc",
-    label: "推薦指數：由高到低",
-    shortLabel: "推薦指數 (高→低)",
+    label: "爆米花指數：由高到低",
+    shortLabel: "爆米花指數 (高→低)",
     group: "沈伯的評分排序",
   },
   {
     value: "recommend-asc",
-    label: "推薦指數：由低到高",
-    shortLabel: "推薦指數 (低→高)",
+    label: "爆米花指數：由低到高",
+    shortLabel: "爆米花指數 (低→高)",
     group: "沈伯的評分排序",
   },
 ];
@@ -312,7 +312,7 @@ export default function PostFilterSection({ posts }: { posts: BlogPost[] }) {
             </button>
 
             {openMenu === "sort" && (
-              <div className="absolute right-0 z-30 mt-2 w-52 origin-top-right rounded-xl border border-slate-200/80 bg-white py-2 shadow-lg ring-1 ring-black/5 dark:border-slate-800 dark:bg-slate-900">
+              <div className="absolute right-0 z-30 mt-2 w-56 origin-top-right rounded-xl border border-slate-200/80 bg-white py-2 shadow-lg ring-1 ring-black/5 dark:border-slate-800 dark:bg-slate-900">
                 <div className="px-3 py-1 text-[11px] font-semibold tracking-wider text-slate-400">
                   發布日期
                 </div>
