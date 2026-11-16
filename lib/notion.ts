@@ -49,9 +49,6 @@ export interface NotionBlock {
   [key: string]: any;
 }
 
-/**
- * 從痞客邦原網址提取 ID 作為 SEO 友善的 Slug，若無則回退至 Page ID
- */
 export function extractSlug(page: any): string {
   const origUrl = page.properties?.["Original URL"]?.url || "";
   const match = origUrl.match(/\/blog\/posts?\/(\d+)/);
@@ -61,9 +58,6 @@ export function extractSlug(page: any): string {
   return page.id.replace(/-/g, "");
 }
 
-/**
- * 通用 Notion 欄位解析器：兼容 Number、Rich Text 與 Select 屬性型別
- */
 function parseNumericProperty(prop: any): number | undefined {
   if (!prop) return undefined;
   if (prop.type === "number" && typeof prop.number === "number") {
@@ -99,9 +93,6 @@ function parseYearProperty(prop: any): string | undefined {
   return undefined;
 }
 
-/**
- * 極速查詢資料庫中所有發布的文章列表（純讀取資料庫欄位，0 額外內文區塊請求）
- */
 export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
   if (!DATABASE_ID) {
     console.warn("NOTION_DATABASE_ID 未設定");
@@ -117,19 +108,13 @@ export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
       while (true) {
         const queryParams: any = {
           database_id: DATABASE_ID,
-          sorts: [
-            {
-              property: "Date",
-              direction: "descending",
-            },
-          ],
+          sorts: [{ property: "Date", direction: "descending" }],
         };
         if (cursor) {
           queryParams.start_cursor = cursor;
         }
 
         const response: any = await notion.databases.query(queryParams);
-
         allPages.push(...response.results);
         if (!response.has_more || !response.next_cursor) break;
         cursor = response.next_cursor;
@@ -149,7 +134,6 @@ export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
           const tags = (props.Tags?.multi_select || []).map((t: any) => t.name);
           const originalUrl = props["Original URL"]?.url || "";
 
-          // 直接從 Notion 資料庫欄位讀取「超主觀評分」、「爆米花指數」與「上映年份」（兼容舊欄位名）
           const watchScore =
             parseNumericProperty(props["超主觀評分"]) ??
             parseNumericProperty(props["好看指數"]);
@@ -158,7 +142,6 @@ export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
             parseNumericProperty(props["推薦指數"]);
           let releaseYear = parseYearProperty(props["上映年份"]);
 
-          // 若資料庫未填寫上映年份，順手從文章標題比對（純字串運算，不耗費 API）
           if (!releaseYear) {
             const titleYear = title.match(/(?:19|20)\d{2}/);
             if (titleYear) releaseYear = titleYear[0];
@@ -199,12 +182,8 @@ export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
   return [];
 });
 
-// 保持向下相容別名，確保任何頁面引用皆不會報錯
 export const getAllPostsMeta = getAllPosts;
 
-/**
- * 依據 Slug 或 Page ID 查詢單篇文章資訊 (使用 React cache 記憶化)
- */
 export const getPostBySlug = cache(async (slug: string): Promise<BlogPost | null> => {
   const allPosts = await getAllPosts();
   const matched = allPosts.find(
@@ -213,9 +192,6 @@ export const getPostBySlug = cache(async (slug: string): Promise<BlogPost | null
   return matched || null;
 });
 
-/**
- * 遞迴/分頁獲取單篇文章內的所有區塊（含指數退避重試機制，確保單篇內文穩定載入）
- */
 export const getPageBlocks = cache(async (blockId: string): Promise<NotionBlock[]> => {
   const blocks: NotionBlock[] = [];
   let cursor: string | undefined = undefined;
@@ -226,3 +202,36 @@ export const getPageBlocks = cache(async (blockId: string): Promise<NotionBlock[
 
     while (retries > 0) {
       try {
+        const listParams: any = {
+          block_id: blockId,
+          page_size: 100,
+        };
+        if (cursor) {
+          listParams.start_cursor = cursor;
+        }
+
+        const response: any = await notion.blocks.children.list(listParams);
+        blocks.push(...response.results);
+
+        if (!response.has_more || !response.next_cursor) {
+          return blocks;
+        }
+        cursor = response.next_cursor;
+        success = true;
+        break;
+      } catch (error: any) {
+        retries--;
+        const attempt = 5 - retries;
+        if (retries === 0) {
+          console.error(`獲取 Notion 區塊最終失敗 (Block ID: ${blockId}):`, error);
+          return blocks;
+        }
+        await sleep(800 * attempt);
+      }
+    }
+
+    if (!success) break;
+  }
+
+  return blocks;
+});
