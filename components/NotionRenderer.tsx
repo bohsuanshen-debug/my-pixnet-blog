@@ -12,7 +12,7 @@ interface NotionRendererProps {
 }
 
 /**
- * 渲染 Rich Text 富文本節點 (支援粗體、斜體、刪除線、底線、內聯程式碼、超連結)
+ * 渲染 Rich Text 富文本節點 (支援粗體、斜體、刪除線、底線、內聯程式碼、超連結、以及社群關鍵字自動轉連結)
  */
 export function RenderRichText({ richText }: { richText: NotionRichText[] }) {
   if (!richText || richText.length === 0) return null;
@@ -24,6 +24,54 @@ export function RenderRichText({ richText }: { richText: NotionRichText[] }) {
         if (!text) return null;
 
         let content: React.ReactNode = text.content;
+
+        // 若無自訂連結，自動比對 FB / IG 社群呼籲關鍵字並注入對應連結
+        if (!href && typeof content === "string") {
+          const raw = content;
+          if (
+            (raw.includes("FB") || raw.includes("Facebook")) &&
+            (raw.includes("影視戴爾瑞") || raw.includes("一個讚"))
+          ) {
+            const parts = raw.split("【影視戴爾瑞】");
+            if (parts.length > 1) {
+              content = (
+                <>
+                  {parts[0]}
+                  <a
+                    href="https://www.facebook.com/bohsuanmoviediary"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-blue-600 underline underline-offset-4 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                  >
+                    【影視戴爾瑞】
+                  </a>
+                  {parts.slice(1).join("【影視戴爾瑞】")}
+                </>
+              );
+            }
+          } else if (
+            (raw.includes("IG") || raw.includes("Instagram") || raw.includes("Instargram")) &&
+            raw.includes("影視戴爾瑞")
+          ) {
+            const parts = raw.split("【影視戴爾瑞】");
+            if (parts.length > 1) {
+              content = (
+                <>
+                  {parts[0]}
+                  <a
+                    href="https://www.instagram.com/bh_moviediary"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-pink-600 underline underline-offset-4 hover:text-pink-700 dark:text-pink-400 dark:hover:text-pink-300 transition-colors"
+                  >
+                    【影視戴爾瑞】
+                  </a>
+                  {parts.slice(1).join("【影視戴爾瑞】")}
+                </>
+              );
+            }
+          }
+        }
 
         if (annotations?.bold) {
           content = <strong key={`b-${idx}`}>{content}</strong>;
