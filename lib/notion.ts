@@ -100,93 +100,9 @@ function parseYearProperty(prop: any): string | undefined {
 }
 
 /**
- * 遞迴擷取單一 Notion Block 內的所有純文字
+ * 極速查詢資料庫中所有發布的文章列表（純讀取資料庫欄位，0 額外內文區塊請求）
  */
-function extractTextFromBlock(block: any): string {
-  const texts: string[] = [];
-
-  const collect = (node: unknown) => {
-    if (!node || typeof node !== "object") return;
-    const record = node as Record<string, unknown>;
-    if (typeof record.plain_text === "string") {
-      texts.push(record.plain_text);
-      return;
-    }
-    for (const value of Object.values(record)) {
-      if (Array.isArray(value)) {
-        value.forEach(collect);
-      } else if (value && typeof value === "object") {
-        collect(value);
-      }
-    }
-  };
-
-  collect(block);
-  return texts.join("");
-}
-
-/**
- * 從文章標題與內文區塊自動擷取「好看指數」、「推薦指數」與「上映年份」（僅在資料庫欄位為空時執行）
- */
-function extractScoreAndYearFromContent(
-  title: string,
-  blocks: NotionBlock[]
-): {
-  watchScore?: number;
-  recommendScore?: number;
-  releaseYear?: string;
-} {
-  const lineTexts = blocks.map(extractTextFromBlock).filter(Boolean);
-  const fullText = lineTexts.join("\n");
-
-  const watchMatch = fullText.match(
-    /好看指數[：:]\s*(\d+(?:\.\d+)?)\s*(?:\/\s*10)?/
-  );
-  const watchScore = watchMatch ? parseFloat(watchMatch[1]) : undefined;
-
-  const recommendMatch = fullText.match(
-    /推薦指數[：:]\s*(\d+(?:\.\d+)?)\s*(?:\/\s*10)?/
-  );
-  const recommendScore = recommendMatch
-    ? parseFloat(recommendMatch[1])
-    : undefined;
-
-  let releaseYear: string | undefined = undefined;
-  const titleYearMatch = title.match(/(?:19|20)\d{2}/);
-  if (titleYearMatch) {
-    releaseYear = titleYearMatch[0];
-  } else {
-    const introText = lineTexts.slice(0, 10).join(" ");
-    const parenYearMatch = introText.match(
-      /[（(][^）)]*?((?:19|20)\d{2})[^）)]*?[）)]/
-    );
-    if (parenYearMatch) {
-      releaseYear = parenYearMatch[1];
-    } else {
-      const generalYearMatch = introText.match(/(?:19|20)\d{2}/);
-      if (generalYearMatch) {
-        releaseYear = generalYearMatch[0];
-      }
-    }
-  }
-
-  return {
-    watchScore:
-      watchScore !== undefined && !Number.isNaN(watchScore)
-        ? watchScore
-        : undefined,
-    recommendScore:
-      recommendScore !== undefined && !Number.isNaN(recommendScore)
-        ? recommendScore
-        : undefined,
-    releaseYear,
-  };
-}
-
-/**
- * 輕量級文章列表查詢（僅查詢資料庫 Metadata，不掃描內文區塊，供單篇內頁與路由生成極速使用）
- */
-export const getAllPostsMeta = cache(async (): Promise<BlogPost[]> => {
+export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
   if (!DATABASE_ID) {
     console.warn("NOTION_DATABASE_ID 未設定");
     return [];
@@ -233,10 +149,12 @@ export const getAllPostsMeta = cache(async (): Promise<BlogPost[]> => {
           const tags = (props.Tags?.multi_select || []).map((t: any) => t.name);
           const originalUrl = props["Original URL"]?.url || "";
 
+          // 直接從 Notion 資料庫欄位讀取評分與上映年份
           const watchScore = parseNumericProperty(props["好看指數"]);
           const recommendScore = parseNumericProperty(props["推薦指數"]);
           let releaseYear = parseYearProperty(props["上映年份"]);
 
+          // 若資料庫未填寫上映年份，順手從文章標題比對（純字串運算，不耗費 API）
           if (!releaseYear) {
             const titleYear = title.match(/(?:19|20)\d{2}/);
             if (titleYear) releaseYear = titleYear[0];
@@ -277,61 +195,14 @@ export const getAllPostsMeta = cache(async (): Promise<BlogPost[]> => {
   return [];
 });
 
-/**
- * 首頁專用完整文章列表（優先讀取資料庫欄位，缺漏欄位才掃描內文區塊）
- */
-export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
-  const basePosts = await getAllPostsMeta();
-  const posts = basePosts.map((p) => ({ ...p }));
-
-  const postsNeedingFallback = posts.filter(
-    (post) =>
-      post.watchScore === undefined ||
-      post.recommendScore === undefined ||
-      post.releaseYear === undefined
-  );
-
-  const startTime = Date.now();
-  const BATCH_SIZE = 4;
-  for (let i = 0; i < postsNeedingFallback.length; i += BATCH_SIZE) {
-    if (Date.now() - startTime > 5500) {
-      console.warn("內文掃描達安全時間上限，剩餘文章將於下次背景更新補齊");
-      break;
-    }
-    const batch = postsNeedingFallback.slice(i, i + BATCH_SIZE);
-    await Promise.all(
-      batch.map(async (post) => {
-        try {
-          const blocks = await getPageBlocks(post.id);
-          if (blocks.length === 0) return;
-          const extracted = extractScoreAndYearFromContent(post.title, blocks);
-          if (post.watchScore === undefined) {
-            post.watchScore = extracted.watchScore;
-          }
-          if (post.recommendScore === undefined) {
-            post.recommendScore = extracted.recommendScore;
-          }
-          if (post.releaseYear === undefined) {
-            post.releaseYear = extracted.releaseYear;
-          }
-        } catch (err) {
-          console.warn(`解析文章評分與年份失敗 (${post.title}):`, err);
-        }
-      })
-    );
-    if (i + BATCH_SIZE < postsNeedingFallback.length) {
-      await sleep(300);
-    }
-  }
-
-  return posts;
-});
+// 保持向下相容別名，確保任何頁面引用皆不會報錯
+export const getAllPostsMeta = getAllPosts;
 
 /**
- * 依據 Slug 或 Page ID 查詢單篇文章基本資訊（使用輕量查詢，絕不因掃描全站內文而耗盡 API 額度）
+ * 依據 Slug 或 Page ID 查詢單篇文章資訊 (使用 React cache 記憶化)
  */
 export const getPostBySlug = cache(async (slug: string): Promise<BlogPost | null> => {
-  const allPosts = await getAllPostsMeta();
+  const allPosts = await getAllPosts();
   const matched = allPosts.find(
     (p) => p.slug === slug || p.id === slug || p.id.replace(/-/g, "") === slug
   );
@@ -339,7 +210,7 @@ export const getPostBySlug = cache(async (slug: string): Promise<BlogPost | null
 });
 
 /**
- * 遞迴/分頁獲取單篇文章內的所有區塊（含指數退避重試機制，防止偶發網路或限流導致空白內文）
+ * 遞迴/分頁獲取單篇文章內的所有區塊（含指數退避重試機制，確保單篇內文穩定載入）
  */
 export const getPageBlocks = cache(async (blockId: string): Promise<NotionBlock[]> => {
   const blocks: NotionBlock[] = [];
@@ -380,7 +251,6 @@ export const getPageBlocks = cache(async (blockId: string): Promise<NotionBlock[
           console.error(`獲取 Notion 區塊最終失敗 (Block ID: ${blockId}):`, error);
           return blocks;
         }
-        // 指數退避等待：800ms -> 1600ms -> 2400ms -> 3200ms
         await sleep(800 * attempt);
       }
     }
