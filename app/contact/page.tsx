@@ -51,12 +51,12 @@ export default function ContactPage() {
               <span className="text-xs text-blue-600 dark:text-blue-400 font-semibold">前往 ↗</span>
             </a>
             <a
-              href="https://www.instagram.com/bohsuan_movie"
+              href="https://www.instagram.com/bh_moviediary"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
             >
-              <span>Instagram：@bohsuan_movie</span>
+              <span>Instagram：@bh_moviediary</span>
               <span className="text-xs text-pink-600 dark:text-pink-400 font-semibold">前往 ↗</span>
             </a>
           </div>

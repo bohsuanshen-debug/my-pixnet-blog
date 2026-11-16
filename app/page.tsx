@@ -43,13 +43,13 @@ export default async function HomePage() {
             FB｜影視戴爾瑞
           </a>
           <a
-            href="https://www.instagram.com/bohsuan_movie"
+            href="https://www.instagram.com/bh_moviediary"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 rounded-lg bg-pink-50 px-3 py-1.5 text-xs font-medium text-pink-700 hover:bg-pink-100 transition-colors dark:bg-pink-950/40 dark:text-pink-300 dark:hover:bg-pink-900/50"
           >
             <Sparkles className="h-3.5 w-3.5" />
-            IG｜bohsuan_movie
+            IG｜bh_moviediary
           </a>
         </div>
 

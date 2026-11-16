@@ -53,7 +53,7 @@ export default function AboutPage() {
               FB 粉專
             </a>
             <a
-              href="https://www.instagram.com/bohsuan_movie"
+              href="https://www.instagram.com/bh_moviediary"
               target="_blank"
               rel="noopener noreferrer"
               className="rounded-lg bg-pink-50 px-2.5 py-1 text-xs font-medium text-pink-700 hover:bg-pink-100 dark:bg-pink-950/40 dark:text-pink-300"
