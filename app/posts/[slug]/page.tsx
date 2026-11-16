@@ -6,7 +6,7 @@ import { getAllPosts, getPostBySlug, getPageBlocks } from "@/lib/notion";
 import NotionRenderer from "@/components/NotionRenderer";
 import AdSense from "@/components/AdSense";
 import { formatDate, estimateReadingTime } from "@/lib/utils";
-import { ArrowLeft, Calendar, Clock, ExternalLink, Film, Tag } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, Film, Tag } from "lucide-react";
 
 // Vercel ISR: 增量靜態生成，每 60 秒在快取失效後重新在背景編譯
 export const revalidate = 60;
@@ -77,6 +77,17 @@ export default async function PostPage({
   const blocks = await getPageBlocks(post.id);
   const readingTime = estimateReadingTime(blocks);
 
+  // 自動拆分「影評｜電影日記簿｜《片名》副標」結構，避免標題過長導致片名斷行
+  const titleParts = post.title.split("｜").map((part) => part.trim()).filter(Boolean);
+  const hasSeriesPrefix =
+    titleParts.length >= 2 &&
+    (titleParts[0].includes("影評") ||
+      titleParts[0].includes("電影日記簿") ||
+      titleParts[0].includes("影集說大話"));
+
+  const seriesPrefix = hasSeriesPrefix ? titleParts.slice(0, -1).join(" ｜ ") : null;
+  const cleanMainTitle = hasSeriesPrefix ? titleParts[titleParts.length - 1] : post.title;
+
   // Schema.org/Article JSON-LD 結構化資料
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://moviesdiary.vercel.app";
   const postUrl = `${siteUrl}/posts/${post.slug}`;
@@ -145,9 +156,17 @@ export default async function PostPage({
           </span>
         </div>
 
-        <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold leading-tight tracking-tight text-slate-900 dark:text-slate-100">
-          {post.title}
-        </h1>
+        {/* 優化後的主標題區塊 */}
+        <div className="space-y-2">
+          {seriesPrefix && (
+            <p className="text-sm font-semibold tracking-wider text-amber-600 dark:text-amber-400">
+              {seriesPrefix}
+            </p>
+          )}
+          <h1 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold leading-snug tracking-tight text-balance text-slate-900 dark:text-slate-100">
+            {cleanMainTitle}
+          </h1>
+        </div>
 
         {/* 標籤 */}
         {post.tags && post.tags.length > 0 && (

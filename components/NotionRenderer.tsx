@@ -159,7 +159,7 @@ function CodeBlock({ block }: { block: any }) {
 }
 
 /**
- * 圖片區塊元件 (使用 Next.js <Image/> 實作 WebP 轉檔、動態大小與 Lazy Loading)
+ * 圖片區塊元件 (高畫質自適應呈現、不強制過度放大、圓角與微陰影)
  */
 function ImageBlock({ block }: { block: any }) {
   const image = block.image;
@@ -175,19 +175,17 @@ function ImageBlock({ block }: { block: any }) {
   if (!src) return null;
 
   return (
-    <figure className="my-8 overflow-hidden rounded-2xl border border-slate-100 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900/40">
-      <div className="relative h-[260px] sm:h-[380px] md:h-[500px] w-full overflow-hidden">
-        <Image
+    <figure className="my-8 flex flex-col items-center">
+      <div className="relative max-w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-1 sm:p-1.5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+        <img
           src={src}
           alt={caption || "文章插圖"}
-          fill
-          sizes="(max-width: 768px) 100vw, 800px"
-          className="object-contain transition-transform duration-300 hover:scale-[1.01]"
           loading="lazy"
+          className="max-h-[540px] w-auto max-w-full rounded-xl object-contain mx-auto transition-transform duration-300 hover:scale-[1.008]"
         />
       </div>
       {caption && (
-        <figcaption className="p-3 text-center text-xs text-slate-500 dark:text-slate-400">
+        <figcaption className="mt-2.5 text-center text-xs text-slate-500 dark:text-slate-400">
           {caption}
         </figcaption>
       )}
@@ -265,6 +263,12 @@ export default function NotionRenderer({
           renderedElements.push(<div key={block.id} className="h-4" />);
           return;
         }
+        // 隱藏文章底部的 FB/IG 呼籲段落（原痞客邦遺留內容）
+        const plainText = richText.map((r: NotionRichText) => r.text?.content || "").join("");
+        const isSocialCTA =
+          (plainText.includes("喜歡的朋友") && (plainText.includes("FB") || plainText.includes("Facebook") || plainText.includes("一個讚"))) ||
+          (plainText.includes("更多影視") && (plainText.includes("Instagram") || plainText.includes("Instargram") || plainText.includes("IG")));
+        if (isSocialCTA) return;
         paragraphCount++;
         renderedElements.push(
           <p
