@@ -163,7 +163,7 @@ export default async function PostPage({
               {seriesPrefix}
             </p>
           )}
-          <h1 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold leading-snug tracking-tight text-balance text-slate-900 dark:text-slate-100">
+          <h1 className="font-serif text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 whitespace-nowrap overflow-x-auto">
             {cleanMainTitle}
           </h1>
         </div>
