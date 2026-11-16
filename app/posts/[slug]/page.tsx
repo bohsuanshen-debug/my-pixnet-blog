@@ -12,6 +12,46 @@ import { ArrowLeft, Calendar, Clock, Film, Tag } from "lucide-react";
 export const revalidate = 60;
 export const dynamicParams = true;
 
+// 從標題或文章前段內文區塊自動擷取 4 位數上映年份（優先比對括號內年份，避免誤抓劇情年代）
+function extractMovieYear(title: string, blocks: unknown[]): string | null {
+  const titleMatch = title.match(/(?:19|20)\d{2}/);
+  if (titleMatch) return titleMatch[0];
+
+  const firstBlocks = Array.isArray(blocks) ? blocks.slice(0, 8) : [];
+  const texts: string[] = [];
+
+  const collectText = (node: unknown) => {
+    if (!node || typeof node !== "object") return;
+    const record = node as Record<string, unknown>;
+    if (typeof record.plain_text === "string") {
+      texts.push(record.plain_text);
+      return;
+    }
+    if (typeof record.text === "string") {
+      texts.push(record.text);
+      return;
+    }
+    for (const value of Object.values(record)) {
+      if (Array.isArray(value)) {
+        value.forEach(collectText);
+      } else if (value && typeof value === "object") {
+        collectText(value);
+      }
+    }
+  };
+
+  firstBlocks.forEach(collectText);
+  const introText = texts.join(" ");
+
+  // 1. 優先抓取括號內的年份，例如 (Tigertail, 2020) 或 (劇場版..., 2005)
+  const parenYearMatch = introText.match(/[（(][^）)]*?((?:19|20)\d{2})[^）)]*?[）)]/);
+  if (parenYearMatch) return parenYearMatch[1];
+
+  // 2. 備援：抓取前段內文出現的四位數年份
+  const generalYearMatch = introText.match(/(?:19|20)\d{2}/);
+  return generalYearMatch ? generalYearMatch[0] : null;
+}
+
 // 建置時預先為最新 20 篇熱門文章建立靜態 HTML，其餘文章由 Vercel ISR 首次請求時動態生成並快取
 export async function generateStaticParams() {
   const posts = await getAllPosts();
@@ -88,9 +128,8 @@ export default async function PostPage({
   const seriesPrefix = hasSeriesPrefix ? titleParts.slice(0, -1).join(" ｜ ") : null;
   const cleanMainTitle = hasSeriesPrefix ? titleParts[titleParts.length - 1] : post.title;
 
-  // 從標題自動擷取 4 位數上映年份 (例如 2005, 2025)
-  const matchYear = post.title.match(/(?:19|20)\d{2}/);
-  const extractedYear = matchYear ? matchYear[0] : null;
+  // 從標題或文章內文前段自動擷取上映年份
+  const extractedYear = extractMovieYear(post.title, blocks);
 
   // Schema.org/Article JSON-LD 結構化資料
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://moviesdiary.vercel.app";
@@ -151,7 +190,9 @@ export default async function PostPage({
           )}
           {extractedYear && (
             <>
-              <span className="font-semibold text-slate-700 dark:text-slate-300">({extractedYear})</span>
+              <span className="font-semibold text-slate-700 dark:text-slate-300">
+                ({extractedYear})
+              </span>
               <span>•</span>
             </>
           )}
