@@ -32,13 +32,6 @@ export default function Footer() {
             <Link href="/privacy" className="hover:text-amber-600 dark:hover:text-amber-400">
               隱私權政策 (Privacy)
             </Link>
-            <Link
-              href="/sitemap.xml"
-              target="_blank"
-              className="hover:text-amber-600 dark:hover:text-amber-400"
-            >
-              網站地圖 (Sitemap)
-            </Link>
           </div>
         </div>
 
