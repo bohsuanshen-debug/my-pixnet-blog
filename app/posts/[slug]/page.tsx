@@ -8,7 +8,8 @@ import AdSense from "@/components/AdSense";
 import { formatDate, estimateReadingTime } from "@/lib/utils";
 import { ArrowLeft, Calendar, Clock, Film, Tag } from "lucide-react";
 
-export const revalidate = 60;
+// 快取 10 分鐘，減少不必要的背景 API 請求；一旦生成成功即長期穩定提供快取
+export const revalidate = 600;
 export const dynamicParams = true;
 
 function extractMovieYear(title: string, blocks: unknown[]): string | null {
@@ -48,11 +49,9 @@ function extractMovieYear(title: string, blocks: unknown[]): string | null {
   return generalYearMatch ? generalYearMatch[0] : null;
 }
 
+// 建置期不並行預編譯文章，避免部署瞬間同時發送數十次 Notion API 請求觸發 429 限流
 export async function generateStaticParams() {
-  const posts = await getAllPosts();
-  return posts.slice(0, 20).map((post) => ({
-    slug: post.slug,
-  }));
+  return [];
 }
 
 export async function generateMetadata({
@@ -60,41 +59,43 @@ export async function generateMetadata({
 }: {
   params: { slug: string };
 }): Promise<Metadata> {
-  const post = await getPostBySlug(params.slug);
-  if (!post) {
+  try {
+    const post = await getPostBySlug(params.slug);
+    if (!post) {
+      return { title: "文章不存在" };
+    }
+
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://moviesdiary.vercel.app";
+    const postUrl = `${siteUrl}/posts/${post.slug}`;
+    const description =
+      post.excerpt || `${post.title} - 由戴爾瑞撰寫的深度影評與觀後心得。`;
+
     return {
-      title: "文章不存在",
+      title: post.title,
+      description: description,
+      alternates: {
+        canonical: postUrl,
+      },
+      openGraph: {
+        title: post.title,
+        description: description,
+        url: postUrl,
+        type: "article",
+        publishedTime: post.date,
+        authors: ["戴爾瑞"],
+        tags: post.tags,
+        images: post.coverImage ? [{ url: post.coverImage }] : [],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: post.title,
+        description: description,
+        images: post.coverImage ? [post.coverImage] : [],
+      },
     };
+  } catch {
+    return { title: "影視戴爾瑞" };
   }
-
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://moviesdiary.vercel.app";
-  const postUrl = `${siteUrl}/posts/${post.slug}`;
-  const description =
-    post.excerpt || `${post.title} - 由戴爾瑞撰寫的深度影評與觀後心得。`;
-
-  return {
-    title: post.title,
-    description: description,
-    alternates: {
-      canonical: postUrl,
-    },
-    openGraph: {
-      title: post.title,
-      description: description,
-      url: postUrl,
-      type: "article",
-      publishedTime: post.date,
-      authors: ["戴爾瑞"],
-      tags: post.tags,
-      images: post.coverImage ? [{ url: post.coverImage }] : [],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: post.title,
-      description: description,
-      images: post.coverImage ? [post.coverImage] : [],
-    },
-  };
 }
 
 export default async function PostPage({
@@ -102,19 +103,27 @@ export default async function PostPage({
 }: {
   params: { slug: string };
 }) {
-  const [post, allPosts] = await Promise.all([
-    getPostBySlug(params.slug),
-    getAllPosts(),
-  ]);
-
+  const post = await getPostBySlug(params.slug);
   if (!post) {
     notFound();
   }
 
-  let blocks = await getPageBlocks(post.id);
-  if (blocks.length === 0) {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    blocks = await getPageBlocks(post.id);
+  // 循序讀取區塊與全站對照表，避免單一頁面同時發起多條並發請求搶佔頻寬
+  const blocks = await getPageBlocks(post.id);
+
+  // 雙重保險：若回傳區塊為空，丟出錯誤阻止寫入空白快取
+  if (!blocks || blocks.length === 0) {
+    throw new Error(`文章區塊為空，拒絕快取空白頁面 (Slug: ${params.slug})`);
+  }
+
+  let relatedPostLinks: { slug: string; title: string }[] = [];
+  try {
+    const allPosts = await getAllPosts();
+    relatedPostLinks = allPosts
+      .filter((p) => p.id !== post.id)
+      .map((p) => ({ slug: p.slug, title: p.title }));
+  } catch {
+    // 延伸閱讀配對為非核心功能，失敗時靜默略過不影響主內文顯示
   }
 
   const readingTime = estimateReadingTime(blocks);
@@ -130,11 +139,6 @@ export default async function PostPage({
   const cleanMainTitle = hasSeriesPrefix ? titleParts[titleParts.length - 1] : post.title;
 
   const extractedYear = post.releaseYear || extractMovieYear(post.title, blocks);
-
-  // 準備全站文章對照清單供內文延伸閱讀自動配對超連結（排除本篇自身）
-  const relatedPostLinks = allPosts
-    .filter((p) => p.id !== post.id)
-    .map((p) => ({ slug: p.slug, title: p.title }));
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://moviesdiary.vercel.app";
   const postUrl = `${siteUrl}/posts/${post.slug}`;
@@ -241,7 +245,7 @@ export default async function PostPage({
       {/* 廣告版位 2：文章頁頂部廣告 */}
       <AdSense slotType="article-top" />
 
-      {/* 核心文章內文渲染器（含社群導流還原與延伸閱讀自動連結） */}
+      {/* 核心文章內文渲染器 */}
       <main className="my-8">
         <NotionRenderer
           blocks={blocks}

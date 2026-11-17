@@ -3,6 +3,7 @@ import { cache } from "react";
 
 export const notion = new Client({
   auth: process.env.NOTION_TOKEN,
+  timeoutMs: 8000, // 單次請求 8 秒超時保護，避免卡死觸發 Vercel 504
 });
 
 export const DATABASE_ID = process.env.NOTION_DATABASE_ID || "";
@@ -93,9 +94,6 @@ function parseYearProperty(prop: any): string | undefined {
   return undefined;
 }
 
-/**
- * 將單一 Notion Page 物件轉換為標準 BlogPost 格式
- */
 function mapNotionPageToPost(page: any): BlogPost {
   const props = page.properties || {};
   const title =
@@ -145,13 +143,17 @@ function mapNotionPageToPost(page: any): BlogPost {
   };
 }
 
+/**
+ * 查詢所有文章列表（若 Notion API 暫時異常，直接丟出 Error 讓 Vercel 保留舊快取，絕不回傳空陣列洗掉首頁）
+ */
 export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
   if (!DATABASE_ID) {
-    console.warn("NOTION_DATABASE_ID 未設定");
-    return [];
+    throw new Error("NOTION_DATABASE_ID 環境變數未設定");
   }
 
   let retries = 4;
+  let lastError: any = null;
+
   while (retries > 0) {
     try {
       const allPages: any[] = [];
@@ -160,7 +162,7 @@ export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
       while (true) {
         const queryParams: any = {
           database_id: DATABASE_ID,
-          sorts: [{ property: "Date", direction: "descending" }],
+          page_size: 100,
         };
         if (cursor) {
           queryParams.start_cursor = cursor;
@@ -172,26 +174,35 @@ export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
         cursor = response.next_cursor;
       }
 
-      return allPages
+      const posts = allPages
         .filter((page: any) => page.properties && page.object === "page")
         .map(mapNotionPageToPost);
+
+      // 本地端依日期由新到舊排序（比讓 Notion 資料庫端排序更快、且不會漏掉無日期文章）
+      posts.sort((a, b) => {
+        const timeA = new Date(a.date).getTime() || 0;
+        const timeB = new Date(b.date).getTime() || 0;
+        return timeB - timeA;
+      });
+
+      return posts;
     } catch (error: any) {
+      lastError = error;
       retries--;
-      if (retries === 0) {
-        console.error("無法自 Notion 抓取文章列表:", error);
-        return [];
+      const attempt = 4 - retries;
+      console.warn(`Notion 列表查詢第 ${attempt} 次失敗，準備重試:`, error?.message || error);
+      if (retries > 0) {
+        await sleep(800 * attempt);
       }
-      await sleep(1000 * (4 - retries));
     }
   }
-  return [];
+
+  // 重試全數失敗時丟出錯誤，強制 Vercel ISR 繼續沿用原本正常的舊快取畫面
+  throw new Error(`Notion 列表讀取失敗: ${lastError?.message || "Unknown error"}`);
 });
 
 export const getAllPostsMeta = getAllPosts;
 
-/**
- * 依據 Slug 或 Page ID 查詢單篇文章資訊（若列表快取尚未收錄新文章，自動直接向 Notion 查詢該 Page ID 避免 404）
- */
 export const getPostBySlug = cache(async (slug: string): Promise<BlogPost | null> => {
   const cleanSlug = slug.replace(/-/g, "").toLowerCase();
   const allPosts = await getAllPosts();
@@ -202,7 +213,6 @@ export const getPostBySlug = cache(async (slug: string): Promise<BlogPost | null
   );
   if (matched) return matched;
 
-  // 備援機制：若為 32 位 Notion Page ID 且尚未出現在列表中，直接呼叫 pages.retrieve 抓取
   if (/^[0-9a-f]{32}$/.test(cleanSlug)) {
     try {
       const page: any = await notion.pages.retrieve({ page_id: cleanSlug });
@@ -217,6 +227,9 @@ export const getPostBySlug = cache(async (slug: string): Promise<BlogPost | null
   return null;
 });
 
+/**
+ * 獲取單篇文章內文區塊（失敗時直接丟出 Error，絕不回傳空陣列導致畫面顯示「此文章尚無內文」並被快取）
+ */
 export const getPageBlocks = cache(async (blockId: string): Promise<NotionBlock[]> => {
   const blocks: NotionBlock[] = [];
   let cursor: string | undefined = undefined;
@@ -224,6 +237,7 @@ export const getPageBlocks = cache(async (blockId: string): Promise<NotionBlock[
   while (true) {
     let retries = 5;
     let success = false;
+    let lastError: any = null;
 
     while (retries > 0) {
       try {
@@ -245,17 +259,25 @@ export const getPageBlocks = cache(async (blockId: string): Promise<NotionBlock[
         success = true;
         break;
       } catch (error: any) {
+        lastError = error;
         retries--;
         const attempt = 5 - retries;
-        if (retries === 0) {
-          console.error(`獲取 Notion 區塊最終失敗 (Block ID: ${blockId}):`, error);
-          return blocks;
+        console.warn(
+          `Notion 區塊讀取第 ${attempt} 次重試 (Block ID: ${blockId}):`,
+          error?.code || error?.status || error?.message
+        );
+        if (retries > 0) {
+          await sleep(700 * attempt);
         }
-        await sleep(800 * attempt);
       }
     }
 
-    if (!success) break;
+    if (!success) {
+      // 重試全數失敗時直接丟出錯誤，防止寫入空白快取
+      throw new Error(
+        `Notion 區塊讀取失敗 (Block ID: ${blockId}): ${lastError?.message || "Unknown error"}`
+      );
+    }
   }
 
   return blocks;
