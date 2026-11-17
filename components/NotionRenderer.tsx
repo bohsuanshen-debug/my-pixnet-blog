@@ -17,9 +17,6 @@ interface NotionRendererProps {
   allPosts?: RelatedPostLink[];
 }
 
-/**
- * 將痞客邦舊網址轉換為本站站內路徑（例如 https://.../blog/posts/12345 -> /posts/12345）
- */
 function normalizeHref(href: string): { url: string; isInternal: boolean } {
   const pixnetMatch = href.match(/pixnet\.net\/blog\/posts?\/(\d+)/);
   if (pixnetMatch && pixnetMatch[1]) {
@@ -31,11 +28,7 @@ function normalizeHref(href: string): { url: string; isInternal: boolean } {
   return { url: href, isInternal: false };
 }
 
-/**
- * 將純文字中的 FB / IG 社群推廣段落精準拆分，各自注入對應的 Facebook 與 Instagram 超連結
- */
 function renderTextWithSocialLinks(rawText: string): React.ReactNode {
-  // 同時支援「同一段落內換行」或「單獨一行」的 FB / IG 推廣句
   const tokenRegex =
     /((?:喜歡的朋友[^\n]*?【影視戴爾瑞】[^\n]*)|(?:更多影視[^\n]*?【影視戴爾瑞】[^\n]*))/g;
 
@@ -93,9 +86,6 @@ function renderTextWithSocialLinks(rawText: string): React.ReactNode {
   });
 }
 
-/**
- * 渲染 Rich Text 富文本節點 (支援粗體、斜體、刪除線、底線、內聯程式碼、超連結、以及社群關鍵字自動轉連結)
- */
 export function RenderRichText({ richText }: { richText: NotionRichText[] }) {
   if (!richText || richText.length === 0) return null;
 
@@ -107,7 +97,6 @@ export function RenderRichText({ richText }: { richText: NotionRichText[] }) {
 
         let content: React.ReactNode = text.content;
 
-        // 若無自訂連結，自動解析同段落內的 FB 與 IG 社群連結
         if (!href && typeof content === "string") {
           content = renderTextWithSocialLinks(content);
         }
@@ -142,4 +131,6 @@ export function RenderRichText({ richText }: { richText: NotionRichText[] }) {
               <Link
                 key={`a-${idx}`}
                 href={url}
-                className="text-amber-600 underline underline-offset-4 hover:text-amber-700 dark:text-amber-400
+                className="text-amber-600 underline underline-offset-4 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 transition-colors"
+              >
+                {content}
