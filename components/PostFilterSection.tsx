@@ -21,6 +21,10 @@ type SortOption =
   | "recommend-desc"
   | "recommend-asc";
 
+interface PostFilterSectionProps {
+  posts: BlogPost[];
+}
+
 const SORT_OPTIONS: {
   value: SortOption;
   label: string;
@@ -78,7 +82,8 @@ function compareNullableScore(
   return direction === "desc" ? scoreB - scoreA : scoreA - scoreB;
 }
 
-export default function PostFilterSection({ posts }: { posts: BlogPost[] }) {
+export default function PostFilterSection(props: PostFilterSectionProps) {
+  const posts = props.posts;
   const [selectedCategory, setSelectedCategory] = useState<string>("全部");
   const [selectedYear, setSelectedYear] = useState<string>("全部");
   const [sortBy, setSortBy] = useState<SortOption>("date-desc");
@@ -88,7 +93,6 @@ export default function PostFilterSection({ posts }: { posts: BlogPost[] }) {
 
   const controlsRef = useRef<HTMLDivElement>(null);
 
-  // 點擊選單外部自動收合所有下拉選單
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -102,7 +106,6 @@ export default function PostFilterSection({ posts }: { posts: BlogPost[] }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // 自動萃取不重複分類
   const categories = useMemo(() => {
     const validCats = posts
       .map((p) => p.category)
@@ -110,7 +113,6 @@ export default function PostFilterSection({ posts }: { posts: BlogPost[] }) {
     return ["全部", ...Array.from(new Set(validCats))];
   }, [posts]);
 
-  // 自動萃取不重複上映年份（由新到舊排列）
   const releaseYears = useMemo(() => {
     const validYears = posts
       .map((p) => p.releaseYear)
@@ -121,7 +123,6 @@ export default function PostFilterSection({ posts }: { posts: BlogPost[] }) {
     return ["全部", ...uniqueSorted];
   }, [posts]);
 
-  // 同時套用「分類篩選」、「上映年份篩選」與「日期／沈伯評分排序」
   const filteredPosts = useMemo(() => {
     const filtered = posts.filter((post) => {
       const matchCategory =
@@ -170,19 +171,19 @@ export default function PostFilterSection({ posts }: { posts: BlogPost[] }) {
     selectedCategory !== "全部" || selectedYear !== "全部";
 
   return (
-    <>
-      {/* ② 分隔線 + 更多文章標題 + 三合一精簡下拉控制列 */}
+    <React.Fragment>
+      {/* 分隔線 + 全部文章標題 + 三合一精簡下拉控制列 */}
       <div
         ref={controlsRef}
         className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3.5 pt-2 border-b border-slate-200/80 pb-4 dark:border-slate-800"
       >
-        {/* 左側標題 */}
+        {/* 左側標題（已放大字體並改為全部文章） */}
         <div className="flex items-center gap-3">
-          <span className="inline-block h-5 w-1 rounded-full bg-amber-500 shrink-0" />
-          <h2 className="font-serif text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-200">
-            更多文章
+          <span className="inline-block h-6 w-1 rounded-full bg-amber-500 shrink-0" />
+          <h2 className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-200">
+            全部文章
           </h2>
-          <span className="text-xs text-slate-400">
+          <span className="text-sm font-medium text-slate-400">
             ({filteredPosts.length})
           </span>
         </div>
@@ -242,7 +243,7 @@ export default function PostFilterSection({ posts }: { posts: BlogPost[] }) {
             </div>
           )}
 
-          {/* 2. 上映年份下拉選單（支援多年份內捲動） */}
+          {/* 2. 上映年份下拉選單 */}
           {releaseYears.length > 1 && (
             <div className="relative">
               <button
@@ -362,7 +363,7 @@ export default function PostFilterSection({ posts }: { posts: BlogPost[] }) {
             )}
           </div>
 
-          {/* 清除篩選快捷按鈕（僅在有篩選條件時顯示） */}
+          {/* 清除篩選快捷按鈕 */}
           {hasActiveFilter && (
             <button
               type="button"
@@ -381,12 +382,12 @@ export default function PostFilterSection({ posts }: { posts: BlogPost[] }) {
         </div>
       </div>
 
-      {/* ③ 廣告版位：In-Feed */}
+      {/* 廣告版位：In-Feed */}
       <div className="-mt-4">
         <AdSense slotType="in-feed" />
       </div>
 
-      {/* ④ 文章 2 欄卡片 */}
+      {/* 文章 2 欄卡片 */}
       {filteredPosts.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-300 p-10 text-center text-sm text-slate-500 dark:border-slate-800">
           目前沒有符合「
@@ -401,6 +402,6 @@ export default function PostFilterSection({ posts }: { posts: BlogPost[] }) {
           ))}
         </div>
       )}
-    </>
+    </React.Fragment>
   );
 }

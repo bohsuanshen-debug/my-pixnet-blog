@@ -4,8 +4,8 @@ import FeaturedHero from "@/components/FeaturedHero";
 import PostFilterSection from "@/components/PostFilterSection";
 import { Sparkles, Film } from "lucide-react";
 
-// Vercel ISR: 每 60 秒在背景增量重新驗證一次，快取極速響應
-export const revalidate = 60;
+// Vercel ISR: 每 600 秒在背景增量重新驗證一次，配合快取保護機制極速響應
+export const revalidate = 600;
 
 export default async function HomePage() {
   const posts = await getAllPosts();
@@ -58,8 +58,8 @@ export default async function HomePage() {
           {/* ① 精選 Hero：最新 3 篇大圖展示 */}
           <FeaturedHero posts={posts.slice(0, 3)} />
 
-          {/* ②～④ 更多文章（含分類篩選、日期排序、廣告與原有 PostCard 列表） */}
-          {posts.length > 3 && <PostFilterSection posts={posts.slice(3)} />}
+          {/* ② 全部文章（完整收錄包含最新精選在內的所有文章，含分類篩選、年份與評分排序） */}
+          <PostFilterSection posts={posts} />
         </div>
       )}
     </div>
