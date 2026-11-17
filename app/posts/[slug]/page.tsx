@@ -2,17 +2,15 @@ import React from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getAllPostsMeta, getPostBySlug, getPageBlocks } from "@/lib/notion";
+import { getAllPosts, getPostBySlug, getPageBlocks } from "@/lib/notion";
 import NotionRenderer from "@/components/NotionRenderer";
 import AdSense from "@/components/AdSense";
 import { formatDate, estimateReadingTime } from "@/lib/utils";
 import { ArrowLeft, Calendar, Clock, Film, Tag } from "lucide-react";
 
-// Vercel ISR: 增量靜態生成，每 60 秒在快取失效後重新在背景編譯
 export const revalidate = 60;
 export const dynamicParams = true;
 
-// 從標題或文章前段內文區塊自動擷取 4 位數上映年份（優先比對括號內年份，避免誤抓劇情年代）
 function extractMovieYear(title: string, blocks: unknown[]): string | null {
   const titleMatch = title.match(/(?:19|20)\d{2}/);
   if (titleMatch) return titleMatch[0];
@@ -43,24 +41,20 @@ function extractMovieYear(title: string, blocks: unknown[]): string | null {
   firstBlocks.forEach(collectText);
   const introText = texts.join(" ");
 
-  // 1. 優先抓取括號內的年份，例如 (Tigertail, 2020) 或 (劇場版..., 2005)
   const parenYearMatch = introText.match(/[（(][^）)]*?((?:19|20)\d{2})[^）)]*?[）)]/);
   if (parenYearMatch) return parenYearMatch[1];
 
-  // 2. 備援：抓取前段內文出現的四位數年份
   const generalYearMatch = introText.match(/(?:19|20)\d{2}/);
   return generalYearMatch ? generalYearMatch[0] : null;
 }
 
-// 建置時預先為最新 20 篇熱門文章建立靜態 HTML，其餘文章由 Vercel ISR 首次請求時動態生成並快取
 export async function generateStaticParams() {
-  const posts = await getAllPostsMeta();
+  const posts = await getAllPosts();
   return posts.slice(0, 20).map((post) => ({
     slug: post.slug,
   }));
 }
 
-// 動態產生 SEO 與 Open Graph 標籤
 export async function generateMetadata({
   params,
 }: {
@@ -108,12 +102,15 @@ export default async function PostPage({
 }: {
   params: { slug: string };
 }) {
-  const post = await getPostBySlug(params.slug);
+  const [post, allPosts] = await Promise.all([
+    getPostBySlug(params.slug),
+    getAllPosts(),
+  ]);
+
   if (!post) {
     notFound();
   }
 
-  // 取得文章所有 Notion Blocks（若首次回傳為空，短暫等待後再補抓一次確保非暫時性限流）
   let blocks = await getPageBlocks(post.id);
   if (blocks.length === 0) {
     await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -122,7 +119,6 @@ export default async function PostPage({
 
   const readingTime = estimateReadingTime(blocks);
 
-  // 自動拆分「影評｜電影日記簿｜《片名》副標」結構，避免標題過長導致片名斷行
   const titleParts = post.title.split("｜").map((part) => part.trim()).filter(Boolean);
   const hasSeriesPrefix =
     titleParts.length >= 2 &&
@@ -133,10 +129,13 @@ export default async function PostPage({
   const seriesPrefix = hasSeriesPrefix ? titleParts.slice(0, -1).join(" ｜ ") : null;
   const cleanMainTitle = hasSeriesPrefix ? titleParts[titleParts.length - 1] : post.title;
 
-  // 優先使用資料庫上映年份，若無則從標題或文章內文前段自動擷取
   const extractedYear = post.releaseYear || extractMovieYear(post.title, blocks);
 
-  // Schema.org/Article JSON-LD 結構化資料
+  // 準備全站文章對照清單供內文延伸閱讀自動配對超連結（排除本篇自身）
+  const relatedPostLinks = allPosts
+    .filter((p) => p.id !== post.id)
+    .map((p) => ({ slug: p.slug, title: p.title }));
+
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://moviesdiary.vercel.app";
   const postUrl = `${siteUrl}/posts/${post.slug}`;
   const jsonLd = {
@@ -167,7 +166,6 @@ export default async function PostPage({
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-      {/* 結構化資料注入 */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -212,7 +210,7 @@ export default async function PostPage({
           </span>
         </div>
 
-        {/* 優化後的主標題區塊（單行不換行，支援橫向滾動） */}
+        {/* 主標題區塊 */}
         <div className="space-y-2">
           {seriesPrefix && (
             <p className="text-sm font-semibold tracking-wider text-amber-600 dark:text-amber-400">
@@ -240,15 +238,19 @@ export default async function PostPage({
         )}
       </header>
 
-      {/* 廣告版位 2：文章頁頂部廣告 (Top Banner Ad) */}
+      {/* 廣告版位 2：文章頁頂部廣告 */}
       <AdSense slotType="article-top" />
 
-      {/* 核心文章內文渲染器 (內建 廣告版位 3：內文段落置中廣告 In-Article Ad) */}
+      {/* 核心文章內文渲染器（含社群導流還原與延伸閱讀自動連結） */}
       <main className="my-8">
-        <NotionRenderer blocks={blocks} insertInArticleAd={true} />
+        <NotionRenderer
+          blocks={blocks}
+          insertInArticleAd={true}
+          allPosts={relatedPostLinks}
+        />
       </main>
 
-      {/* 廣告版位 4：文章底部廣告 (Bottom Banner Ad) */}
+      {/* 廣告版位 4：文章底部廣告 */}
       <AdSense slotType="article-bottom" />
     </div>
   );

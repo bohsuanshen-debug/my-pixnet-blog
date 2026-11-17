@@ -1,14 +1,34 @@
 "use client";
 
 import React, { useState } from "react";
-import Image from "next/image";
+import Link from "next/link";
 import { NotionBlock, NotionRichText } from "@/lib/notion";
 import AdSense from "./AdSense";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, ArrowUpRight } from "lucide-react";
+
+export interface RelatedPostLink {
+  slug: string;
+  title: string;
+}
 
 interface NotionRendererProps {
   blocks: NotionBlock[];
   insertInArticleAd?: boolean;
+  allPosts?: RelatedPostLink[];
+}
+
+/**
+ * 將痞客邦舊網址轉換為本站站內路徑（例如 https://.../blog/posts/12345 -> /posts/12345）
+ */
+function normalizeHref(href: string): { url: string; isInternal: boolean } {
+  const pixnetMatch = href.match(/pixnet\.net\/blog\/posts?\/(\d+)/);
+  if (pixnetMatch && pixnetMatch[1]) {
+    return { url: `/posts/${pixnetMatch[1]}`, isInternal: true };
+  }
+  if (href.startsWith("/")) {
+    return { url: href, isInternal: true };
+  }
+  return { url: href, isInternal: false };
 }
 
 /**
@@ -50,7 +70,9 @@ export function RenderRichText({ richText }: { richText: NotionRichText[] }) {
               );
             }
           } else if (
-            (raw.includes("IG") || raw.includes("Instagram") || raw.includes("Instargram")) &&
+            (raw.includes("IG") ||
+              raw.includes("Instagram") ||
+              raw.includes("Instargram")) &&
             raw.includes("影視戴爾瑞")
           ) {
             const parts = raw.split("【影視戴爾瑞】");
@@ -97,23 +119,75 @@ export function RenderRichText({ richText }: { richText: NotionRichText[] }) {
         }
 
         if (href) {
-          content = (
-            <a
-              key={`a-${idx}`}
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-amber-600 underline underline-offset-4 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 transition-colors"
-            >
-              {content}
-            </a>
-          );
+          const { url, isInternal } = normalizeHref(href);
+          if (isInternal) {
+            content = (
+              <Link
+                key={`a-${idx}`}
+                href={url}
+                className="text-amber-600 underline underline-offset-4 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 transition-colors"
+              >
+                {content}
+              </Link>
+            );
+          } else {
+            content = (
+              <a
+                key={`a-${idx}`}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-amber-600 underline underline-offset-4 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 transition-colors"
+              >
+                {content}
+              </a>
+            );
+          }
         }
 
         return <React.Fragment key={idx}>{content}</React.Fragment>;
       })}
     </>
   );
+}
+
+/**
+ * 自動比對「｜影集說大話｜《片名》...」或「影評｜電影日記簿｜《片名》...」純文字延伸閱讀，匹配站內文章連結
+ */
+function findMatchedRelatedPost(
+  plainText: string,
+  allPosts?: RelatedPostLink[]
+): RelatedPostLink | null {
+  if (!allPosts || allPosts.length === 0) return null;
+
+  const trimmed = plainText.trim();
+  const isRecommendationLine =
+    trimmed.startsWith("｜") ||
+    trimmed.startsWith("|") ||
+    trimmed.startsWith("影評｜") ||
+    trimmed.startsWith("影集說大話") ||
+    trimmed.startsWith("電影日記簿");
+
+  if (!isRecommendationLine) return null;
+
+  // 1. 優先提取《片名》做精準比對
+  const workMatch = trimmed.match(/《([^》]+)》/);
+  if (workMatch && workMatch[1]) {
+    const workName = workMatch[1].trim();
+    const byWork = allPosts.find((p) => p.title.includes(`《${workName}》`));
+    if (byWork) return byWork;
+  }
+
+  // 2. 備援：比對移除「影評」前綴後的標題關鍵字串
+  const cleanTarget = trimmed.replace(/^影評\s*[｜|]\s*/, "").trim();
+  if (cleanTarget.length >= 6) {
+    const byTitle = allPosts.find(
+      (p) => p.title.includes(cleanTarget) || cleanTarget.includes(p.title)
+    );
+    if (byTitle) return byTitle;
+  }
+
+  return null;
 }
 
 /**
@@ -196,13 +270,12 @@ function ImageBlock({ block }: { block: any }) {
 export default function NotionRenderer({
   blocks,
   insertInArticleAd = true,
+  allPosts = [],
 }: NotionRendererProps) {
   if (!blocks || blocks.length === 0) {
     return <p className="text-slate-500">此文章尚無內文。</p>;
   }
 
-  // 計算適合插入「內文廣告」的位置（大約在段落第 3 或 4 節處，或全文 35% 處）
-  let paragraphCount = 0;
   const targetAdIndex = Math.min(
     Math.max(3, Math.floor(blocks.length * 0.35)),
     blocks.length - 2
@@ -210,8 +283,10 @@ export default function NotionRenderer({
 
   const renderedElements: React.ReactNode[] = [];
 
-  // 清單分組緩衝區
-  let listBuffer: { type: "bulleted_list_item" | "numbered_list_item"; items: any[] } | null = null;
+  let listBuffer: {
+    type: "bulleted_list_item" | "numbered_list_item";
+    items: any[];
+  } | null = null;
 
   const flushListBuffer = () => {
     if (!listBuffer) return;
@@ -236,7 +311,6 @@ export default function NotionRenderer({
   blocks.forEach((block, idx) => {
     const type = block.type;
 
-    // 清單群組聚合處理
     if (type === "bulleted_list_item" || type === "numbered_list_item") {
       if (!listBuffer || listBuffer.type !== type) {
         flushListBuffer();
@@ -249,7 +323,6 @@ export default function NotionRenderer({
       flushListBuffer();
     }
 
-    // 檢查是否需要插入內文廣告
     if (insertInArticleAd && idx === targetAdIndex) {
       renderedElements.push(
         <AdSense key="in-article-ad-slot" slotType="in-content" />
@@ -263,13 +336,33 @@ export default function NotionRenderer({
           renderedElements.push(<div key={block.id} className="h-4" />);
           return;
         }
-        // 隱藏文章底部的 FB/IG 呼籲段落（原痞客邦遺留內容）
-        const plainText = richText.map((r: NotionRichText) => r.text?.content || "").join("");
-        const isSocialCTA =
-          (plainText.includes("喜歡的朋友") && (plainText.includes("FB") || plainText.includes("Facebook") || plainText.includes("一個讚"))) ||
-          (plainText.includes("更多影視") && (plainText.includes("Instagram") || plainText.includes("Instargram") || plainText.includes("IG")));
-        if (isSocialCTA) return;
-        paragraphCount++;
+
+        const plainText = richText
+          .map((r: NotionRichText) => r.text?.content || "")
+          .join("");
+        const hasExistingLink = richText.some((r: NotionRichText) =>
+          Boolean(r.href || r.text?.link?.url)
+        );
+
+        // 若該段落尚未包含超連結，自動偵測是否為站內延伸閱讀標題並轉為可點擊連結
+        if (!hasExistingLink) {
+          const matchedPost = findMatchedRelatedPost(plainText, allPosts);
+          if (matchedPost) {
+            renderedElements.push(
+              <p key={block.id} className="my-3">
+                <Link
+                  href={`/posts/${matchedPost.slug}`}
+                  className="inline-flex items-center gap-1 font-medium text-amber-700 underline decoration-amber-400/70 underline-offset-4 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 transition-colors"
+                >
+                  <span>{plainText.trim()}</span>
+                  <ArrowUpRight className="h-4 w-4 shrink-0 opacity-75" />
+                </Link>
+              </p>
+            );
+            break;
+          }
+        }
+
         renderedElements.push(
           <p
             key={block.id}
@@ -361,12 +454,10 @@ export default function NotionRenderer({
       }
 
       default:
-        // 若為未支援的特殊 block，跳過或純文字呈現
         break;
     }
   });
 
-  // 收尾殘餘清單
   flushListBuffer();
 
   return <article className="prose-content">{renderedElements}</article>;
