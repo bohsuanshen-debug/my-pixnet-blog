@@ -19,7 +19,7 @@ export interface BlogPost {
   originalUrl?: string;
   coverImage?: string;
   excerpt?: string;
-  watchScore?: number;     // 超主觀評分 (滿分 10)
+  watchScore?: number;     // 超主觀評分 (滿分 100)
   recommendScore?: number; // 爆米花指數 (滿分 10)
   releaseYear?: string;    // 上映年份 (4 位數)
 }
@@ -93,6 +93,58 @@ function parseYearProperty(prop: any): string | undefined {
   return undefined;
 }
 
+/**
+ * 將單一 Notion Page 物件轉換為標準 BlogPost 格式
+ */
+function mapNotionPageToPost(page: any): BlogPost {
+  const props = page.properties || {};
+  const title =
+    props.Name?.title?.[0]?.plain_text ||
+    props.Title?.title?.[0]?.plain_text ||
+    "無標題";
+
+  const date = props.Date?.date?.start || page.created_time || "";
+  const category = props.Category?.select?.name || "未分類";
+  const tags = (props.Tags?.multi_select || []).map((t: any) => t.name);
+  const originalUrl = props["Original URL"]?.url || "";
+
+  const watchScore =
+    parseNumericProperty(props["超主觀評分"]) ??
+    parseNumericProperty(props["好看指數"]);
+  const recommendScore =
+    parseNumericProperty(props["爆米花指數"]) ??
+    parseNumericProperty(props["推薦指數"]);
+  let releaseYear = parseYearProperty(props["上映年份"]);
+
+  if (!releaseYear) {
+    const titleYear = title.match(/(?:19|20)\d{2}/);
+    if (titleYear) releaseYear = titleYear[0];
+  }
+
+  let coverImage = "";
+  if (page.cover) {
+    if (page.cover.type === "external") {
+      coverImage = page.cover.external?.url || "";
+    } else if (page.cover.type === "file") {
+      coverImage = page.cover.file?.url || "";
+    }
+  }
+
+  return {
+    id: page.id,
+    slug: extractSlug(page),
+    title,
+    date,
+    category,
+    tags,
+    originalUrl,
+    coverImage,
+    watchScore,
+    recommendScore,
+    releaseYear,
+  };
+}
+
 export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
   if (!DATABASE_ID) {
     console.warn("NOTION_DATABASE_ID 未設定");
@@ -122,54 +174,7 @@ export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
 
       return allPages
         .filter((page: any) => page.properties && page.object === "page")
-        .map((page: any) => {
-          const props = page.properties;
-          const title =
-            props.Name?.title?.[0]?.plain_text ||
-            props.Title?.title?.[0]?.plain_text ||
-            "無標題";
-
-          const date = props.Date?.date?.start || page.created_time || "";
-          const category = props.Category?.select?.name || "未分類";
-          const tags = (props.Tags?.multi_select || []).map((t: any) => t.name);
-          const originalUrl = props["Original URL"]?.url || "";
-
-          const watchScore =
-            parseNumericProperty(props["超主觀評分"]) ??
-            parseNumericProperty(props["好看指數"]);
-          const recommendScore =
-            parseNumericProperty(props["爆米花指數"]) ??
-            parseNumericProperty(props["推薦指數"]);
-          let releaseYear = parseYearProperty(props["上映年份"]);
-
-          if (!releaseYear) {
-            const titleYear = title.match(/(?:19|20)\d{2}/);
-            if (titleYear) releaseYear = titleYear[0];
-          }
-
-          let coverImage = "";
-          if (page.cover) {
-            if (page.cover.type === "external") {
-              coverImage = page.cover.external?.url || "";
-            } else if (page.cover.type === "file") {
-              coverImage = page.cover.file?.url || "";
-            }
-          }
-
-          return {
-            id: page.id,
-            slug: extractSlug(page),
-            title,
-            date,
-            category,
-            tags,
-            originalUrl,
-            coverImage,
-            watchScore,
-            recommendScore,
-            releaseYear,
-          };
-        });
+        .map(mapNotionPageToPost);
     } catch (error: any) {
       retries--;
       if (retries === 0) {
@@ -184,12 +189,32 @@ export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
 
 export const getAllPostsMeta = getAllPosts;
 
+/**
+ * 依據 Slug 或 Page ID 查詢單篇文章資訊（若列表快取尚未收錄新文章，自動直接向 Notion 查詢該 Page ID 避免 404）
+ */
 export const getPostBySlug = cache(async (slug: string): Promise<BlogPost | null> => {
+  const cleanSlug = slug.replace(/-/g, "").toLowerCase();
   const allPosts = await getAllPosts();
   const matched = allPosts.find(
-    (p) => p.slug === slug || p.id === slug || p.id.replace(/-/g, "") === slug
+    (p) =>
+      p.slug.toLowerCase() === cleanSlug ||
+      p.id.replace(/-/g, "").toLowerCase() === cleanSlug
   );
-  return matched || null;
+  if (matched) return matched;
+
+  // 備援機制：若為 32 位 Notion Page ID 且尚未出現在列表中，直接呼叫 pages.retrieve 抓取
+  if (/^[0-9a-f]{32}$/.test(cleanSlug)) {
+    try {
+      const page: any = await notion.pages.retrieve({ page_id: cleanSlug });
+      if (page && page.properties && !page.archived && !page.in_trash) {
+        return mapNotionPageToPost(page);
+      }
+    } catch (error) {
+      console.warn(`直接讀取 Notion Page 失敗 (${cleanSlug}):`, error);
+    }
+  }
+
+  return null;
 });
 
 export const getPageBlocks = cache(async (blockId: string): Promise<NotionBlock[]> => {
