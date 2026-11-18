@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useRef, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import PostCard from "@/components/PostCard";
 import AdSense from "@/components/AdSense";
 import { BlogPost } from "@/lib/notion";
@@ -86,6 +87,7 @@ function compareNullableScore(
 
 export default function PostFilterSection(props: PostFilterSectionProps) {
   const posts = props.posts;
+  const searchParams = useSearchParams();
   const [selectedCategory, setSelectedCategory] = useState<string>("全部");
   const [selectedYear, setSelectedYear] = useState<string>("全部");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -95,6 +97,16 @@ export default function PostFilterSection(props: PostFilterSectionProps) {
   );
 
   const controlsRef = useRef<HTMLDivElement>(null);
+
+  // 監聽 Header 導覽列傳入的 ?category=... 參數並同步套用
+  useEffect(() => {
+    const paramCat = searchParams.get("category");
+    if (paramCat) {
+      setSelectedCategory(paramCat);
+    } else {
+      setSelectedCategory("全部");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -109,11 +121,16 @@ export default function PostFilterSection(props: PostFilterSectionProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // 統一提供「全部、電影、影評、其他」以及其餘資料庫分類
   const categories = useMemo(() => {
     const validCats = posts
       .map((p) => p.category)
       .filter((cat): cat is string => Boolean(cat && cat.trim() !== ""));
-    return ["全部", ...Array.from(new Set(validCats))];
+    const base = ["全部", "電影", "影評", "其他"];
+    const extra = Array.from(new Set(validCats)).filter(
+      (c) => !base.includes(c)
+    );
+    return [...base, ...extra];
   }, [posts]);
 
   const releaseYears = useMemo(() => {
@@ -129,8 +146,23 @@ export default function PostFilterSection(props: PostFilterSectionProps) {
   const filteredPosts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     const filtered = posts.filter((post) => {
-      const matchCategory =
-        selectedCategory === "全部" || post.category === selectedCategory;
+      const cat = (post.category || "").trim();
+      let matchCategory = false;
+
+      if (selectedCategory === "全部") {
+        matchCategory = true;
+      } else if (selectedCategory === "電影") {
+        matchCategory = cat === "電影" || cat.includes("電影");
+      } else if (selectedCategory === "影評") {
+        matchCategory = cat === "影評" || cat.includes("影評");
+      } else if (selectedCategory === "其他") {
+        const isMovie = cat === "電影" || cat.includes("電影");
+        const isReview = cat === "影評" || cat.includes("影評");
+        matchCategory = !isMovie && !isReview;
+      } else {
+        matchCategory = cat === selectedCategory;
+      }
+
       const matchYear =
         selectedYear === "全部" || post.releaseYear === selectedYear;
 
@@ -174,15 +206,17 @@ export default function PostFilterSection(props: PostFilterSectionProps) {
         }
       }
     });
-  }, [posts, selectedCategory, selectedYear, sortBy]);
+  }, [posts, selectedCategory, selectedYear, searchQuery, sortBy]);
 
   const currentSort =
     SORT_OPTIONS.find((opt) => opt.value === sortBy) || SORT_OPTIONS[0];
   const hasActiveFilter =
-    selectedCategory !== "全部" || selectedYear !== "全部" || searchQuery.trim() !== "";
+    selectedCategory !== "全部" ||
+    selectedYear !== "全部" ||
+    searchQuery.trim() !== "";
 
   return (
-    <React.Fragment>
+    <section id="all-posts" className="scroll-mt-20 space-y-6">
       {/* 分隔線 + 全部文章標題 + 搜尋列與精簡下拉控制列 */}
       <div
         ref={controlsRef}
@@ -193,7 +227,7 @@ export default function PostFilterSection(props: PostFilterSectionProps) {
           <div className="flex items-center gap-3">
             <span className="inline-block h-6 w-1 rounded-full bg-amber-500 shrink-0" />
             <h2 className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-200">
-              全部文章
+              {selectedCategory === "全部" ? "全部文章" : selectedCategory}
             </h2>
             <span className="text-sm font-medium text-slate-400">
               ({filteredPosts.length})
@@ -418,7 +452,7 @@ export default function PostFilterSection(props: PostFilterSectionProps) {
       </div>
 
       {/* 廣告版位：In-Feed */}
-      <div className="-mt-4">
+      <div className="-mt-2">
         <AdSense slotType="in-feed" />
       </div>
 
@@ -427,7 +461,9 @@ export default function PostFilterSection(props: PostFilterSectionProps) {
         <div className="rounded-2xl border border-dashed border-slate-300 p-10 text-center text-sm text-slate-500 dark:border-slate-800">
           目前沒有符合「
           {searchQuery ? `搜尋：${searchQuery}` : ""}
-          {selectedCategory !== "全部" ? `${searchQuery ? " · " : ""}${selectedCategory}` : ""}
+          {selectedCategory !== "全部"
+            ? `${searchQuery ? " · " : ""}${selectedCategory}`
+            : ""}
           {selectedYear !== "全部" ? ` · ${selectedYear} 年` : ""}
           」條件的文章。
           <div className="mt-3">
@@ -452,6 +488,6 @@ export default function PostFilterSection(props: PostFilterSectionProps) {
           ))}
         </div>
       )}
-    </React.Fragment>
+    </section>
   );
 }

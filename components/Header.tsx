@@ -3,11 +3,21 @@
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Menu, X, Film, Sparkles, ExternalLink } from "lucide-react";
+import { useRouter, usePathname } from "next/navigation";
+import { Menu, X, Film, Sparkles, ExternalLink, Layers } from "lucide-react";
+
+const CATEGORY_NAV_ITEMS = [
+  { label: "所有文章", category: "全部", href: "/#all-posts" },
+  { label: "電影", category: "電影", href: "/?category=電影#all-posts" },
+  { label: "影評", category: "影評", href: "/?category=影評#all-posts" },
+  { label: "其他", category: "其他", href: "/?category=其他#all-posts" },
+];
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const pathname = usePathname();
 
   // 點擊選單外部時自動收合
   useEffect(() => {
@@ -23,12 +33,6 @@ export default function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const siteLinks = [
-    { label: "關於我們", href: "/about" },
-    { label: "聯絡我們", href: "/contact" },
-    { label: "隱私權政策", href: "/privacy" },
-  ];
-
   const socialLinks = [
     {
       label: "FB｜影視戴爾瑞",
@@ -42,11 +46,37 @@ export default function Header() {
     },
   ];
 
+  const siteLinks = [
+    { label: "關於我們", href: "/about" },
+    { label: "聯絡我們", href: "/contact" },
+    { label: "隱私權政策", href: "/privacy" },
+  ];
+
+  // 點擊分類時同步更新網址並平滑捲動至全部文章區塊
+  const handleCategoryClick = (
+    e: React.MouseEvent<HTMLAnchorElement>,
+    item: (typeof CATEGORY_NAV_ITEMS)[number]
+  ) => {
+    setMenuOpen(false);
+    if (pathname === "/") {
+      e.preventDefault();
+      const targetUrl =
+        item.category === "全部"
+          ? "/#all-posts"
+          : `/?category=${encodeURIComponent(item.category)}#all-posts`;
+      router.push(targetUrl, { scroll: false });
+      const el = document.getElementById("all-posts");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-100 bg-white/80 backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-950/80 transition-colors">
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6">
-        {/* 左側：完全還原你原本的 Logo 圖片與品牌樣式 */}
-        <Link href="/" className="group flex items-center gap-2.5">
+        {/* 左側：Logo 圖片與品牌名稱 */}
+        <Link href="/" className="group flex items-center gap-2.5 shrink-0">
           <div className="relative h-9 w-9 overflow-hidden rounded-lg shadow-sm border border-slate-100 dark:border-slate-800 group-hover:ring-2 group-hover:ring-amber-500 transition-all">
             <Image
               src="/logo.jpg"
@@ -62,14 +92,20 @@ export default function Header() {
           </span>
         </Link>
 
-        {/* 右側：首頁連結 + 三條槓下拉式選單 */}
+        {/* 右側：四大分類導覽連結 + 漢堡下拉式選單 */}
         <nav className="flex items-center gap-4 sm:gap-6 text-sm font-medium text-slate-600 dark:text-slate-400">
-          <Link
-            href="/"
-            className="transition-colors hover:text-amber-600 dark:hover:text-amber-400"
-          >
-            首頁
-          </Link>
+          <div className="hidden md:flex items-center gap-5">
+            {CATEGORY_NAV_ITEMS.map((item) => (
+              <Link
+                key={item.category}
+                href={item.href}
+                onClick={(e) => handleCategoryClick(e, item)}
+                className="transition-colors hover:text-amber-600 dark:hover:text-amber-400"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
 
           <div className="relative" ref={dropdownRef}>
             <button
@@ -87,26 +123,27 @@ export default function Header() {
             </button>
 
             {menuOpen && (
-              <div className="absolute right-0 mt-2 w-48 origin-top-right rounded-xl border border-slate-200/80 bg-white py-2 shadow-lg ring-1 ring-black/5 dark:border-slate-800 dark:bg-slate-900">
-                {/* 區塊一：網站資訊 */}
+              <div className="absolute right-0 mt-2 w-52 origin-top-right rounded-xl border border-slate-200/80 bg-white py-2 shadow-lg ring-1 ring-black/5 dark:border-slate-800 dark:bg-slate-900">
+                {/* 區塊一：文章分類 */}
                 <div className="px-3 py-1 text-[11px] font-semibold tracking-wider text-slate-400">
-                  網站資訊
+                  文章分類
                 </div>
-                {siteLinks.map((item) => (
+                {CATEGORY_NAV_ITEMS.map((item) => (
                   <Link
-                    key={item.href}
+                    key={item.category}
                     href={item.href}
-                    onClick={() => setMenuOpen(false)}
-                    className="block px-4 py-2 text-sm text-slate-700 transition-colors hover:bg-amber-50 hover:text-amber-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-amber-400"
+                    onClick={(e) => handleCategoryClick(e, item)}
+                    className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 transition-colors hover:bg-amber-50 hover:text-amber-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-amber-400"
                   >
-                    {item.label}
+                    <Layers className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                    <span>{item.label}</span>
                   </Link>
                 ))}
 
                 {/* 分隔線 */}
                 <div className="my-1.5 border-t border-slate-100 dark:border-slate-800" />
 
-                {/* 區塊二：社群追蹤 */}
+                {/* 區塊二：追蹤社群（已調換至網站資訊上方） */}
                 <div className="px-3 py-1 text-[11px] font-semibold tracking-wider text-slate-400">
                   追蹤社群
                 </div>
@@ -129,6 +166,24 @@ export default function Header() {
                     </a>
                   );
                 })}
+
+                {/* 分隔線 */}
+                <div className="my-1.5 border-t border-slate-100 dark:border-slate-800" />
+
+                {/* 區塊三：網站資訊（已調換至追蹤社群下方） */}
+                <div className="px-3 py-1 text-[11px] font-semibold tracking-wider text-slate-400">
+                  網站資訊
+                </div>
+                {siteLinks.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMenuOpen(false)}
+                    className="block px-4 py-2 text-sm text-slate-700 transition-colors hover:bg-amber-50 hover:text-amber-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-amber-400"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
               </div>
             )}
           </div>
