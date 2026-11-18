@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Image from "next/image";
 import { FastAverageColor } from "fast-average-color";
 
 interface AmbientPostLayoutProps {
@@ -8,61 +9,39 @@ interface AmbientPostLayoutProps {
   children: React.ReactNode;
 }
 
-// 預設降級：柔和的暖米灰漸層（#F5F3EE 到 #E5E0D8）
-const DEFAULT_BG = "linear-gradient(135deg, #F5F3EE 0%, #E5E0D8 100%)";
+const DEFAULT_BG = "linear-gradient(135deg, #2b2d42 0%, #1d1e2c 100%)";
 
 export default function AmbientPostLayout({
   coverImage,
   children,
 }: AmbientPostLayoutProps) {
-  const [backgroundStyle, setBackgroundStyle] = useState<string>(DEFAULT_BG);
+  const [gradient, setGradient] = useState<string>(DEFAULT_BG);
 
   useEffect(() => {
-    if (!coverImage) {
-      setBackgroundStyle(DEFAULT_BG);
-      return;
-    }
+    if (!coverImage) return;
 
     let isMounted = true;
     const fac = new FastAverageColor();
 
-    // 透過 Image 物件與 crossOrigin 萃取主色調
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.referrerPolicy = "no-referrer";
-    img.src = coverImage;
-
-    img.onload = () => {
-      try {
-        const color = fac.getColor(img, {
-          algorithm: "dominant",
-          ignoredColor: [
-            [255, 255, 255, 255], // 忽略純白邊框
-            [0, 0, 0, 255, 50],   // 忽略過深的純黑
-          ],
-        });
-
+    fac
+      .getColorAsync(coverImage, {
+        algorithm: "dominant",
+        crossOrigin: "anonymous",
+      })
+      .then((color) => {
         if (!isMounted) return;
-
         const [r, g, b] = color.value;
-        // 生成深淺層次：主氛圍色（較柔和飽滿）與較深/同調的底色
-        // 降低透明度或調整明暗，打造類似電影放映室海報微光效果
-        const primaryColor = `rgb(${r}, ${g}, ${b})`;
-        const secondaryColor = `rgb(${Math.max(0, Math.floor(r * 0.55))}, ${Math.max(0, Math.floor(g * 0.55))}, ${Math.max(0, Math.floor(b * 0.55))})`;
-        const accentSoftColor = `rgb(${Math.min(255, Math.floor(r * 1.25 + 30))}, ${Math.min(255, Math.floor(g * 1.25 + 30))}, ${Math.min(255, Math.floor(b * 1.25 + 30))})`;
+        const cPrimary = `rgb(${r}, ${g}, ${b})`;
+        const cDark = `rgb(${Math.max(10, Math.floor(r * 0.4))}, ${Math.max(10, Math.floor(g * 0.4))}, ${Math.max(15, Math.floor(b * 0.4))})`;
+        const cLight = `rgb(${Math.min(255, Math.floor(r * 1.3 + 30))}, ${Math.min(255, Math.floor(g * 1.3 + 30))}, ${Math.min(255, Math.floor(b * 1.3 + 30))})`;
 
-        // 放射漸層結合線性漸層，呈現電影海報主體聚焦的光暈感
-        const gradient = `radial-gradient(ellipse at 50% 0%, ${accentSoftColor} 0%, ${primaryColor} 45%, ${secondaryColor} 100%)`;
-        setBackgroundStyle(gradient);
-      } catch (err) {
-        // CORS 或畫布存取受限時安全降級
-        if (isMounted) setBackgroundStyle(DEFAULT_BG);
-      }
-    };
-
-    img.onerror = () => {
-      if (isMounted) setBackgroundStyle(DEFAULT_BG);
-    };
+        setGradient(
+          `radial-gradient(ellipse at 50% -10%, ${cLight} 0%, ${cPrimary} 45%, ${cDark} 100%)`
+        );
+      })
+      .catch(() => {
+        // Fallback
+      });
 
     return () => {
       isMounted = false;
@@ -72,17 +51,27 @@ export default function AmbientPostLayout({
 
   return (
     <div
-      className="relative min-h-screen w-full transition-all duration-700 ease-out py-6 sm:py-12 px-3 sm:px-6"
+      className="relative min-h-screen w-full transition-colors duration-700 ease-out py-6 sm:py-12 px-3 sm:px-6 overflow-hidden"
       style={{
-        background: backgroundStyle,
+        background: gradient,
         backgroundAttachment: "fixed",
       }}
     >
-      {/* 柔化微噪點與氛圍微光覆蓋層 */}
-      <div className="pointer-events-none absolute inset-0 bg-black/10 backdrop-brightness-[0.98]" />
+      {/* 若有封面，在背景放一個高斯模糊巨幅光暈底圖（類似 iOS 鎖定畫面桌布散景） */}
+      {coverImage && (
+        <div className="pointer-events-none fixed inset-0 overflow-hidden opacity-30 select-none z-0">
+          <div
+            className="absolute -inset-[30%] bg-cover bg-center blur-[80px] scale-125 transform-gpu"
+            style={{ backgroundImage: `url(${coverImage})` }}
+          />
+          <div className="absolute inset-0 bg-black/25" />
+        </div>
+      )}
 
-      {/* 置前文章主體卡片（半透明毛玻璃質感朦版：讓海報微光透出來，同時保有絕佳閱讀舒適度） */}
-      <div className="relative mx-auto max-w-4xl rounded-2xl sm:rounded-3xl border border-white/70 bg-white/78 p-6 sm:p-10 md:p-14 shadow-2xl backdrop-blur-xl ring-1 ring-black/5 dark:bg-slate-900/80 dark:border-white/10 transition-all duration-300">
+      {/* ── iPhone 通知卡片材質 (iOS Liquid Glass Modal) ── */}
+      <div className="relative z-10 mx-auto max-w-4xl rounded-[28px] sm:rounded-[36px] border border-white/40 bg-white/60 p-6 sm:p-10 md:p-14 shadow-[0_20px_50px_rgba(0,0,0,0.18)] backdrop-blur-2xl backdrop-saturate-150 transition-all duration-300">
+        {/* 卡片頂部微反光倒角光邊 (模擬蘋果玻璃邊緣高光) */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/80 to-transparent" />
         {children}
       </div>
     </div>
