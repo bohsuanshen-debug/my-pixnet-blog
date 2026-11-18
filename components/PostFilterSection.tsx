@@ -11,6 +11,8 @@ import {
   FolderOpen,
   CalendarRange,
   RotateCcw,
+  Search,
+  X,
 } from "lucide-react";
 
 type SortOption =
@@ -86,6 +88,7 @@ export default function PostFilterSection(props: PostFilterSectionProps) {
   const posts = props.posts;
   const [selectedCategory, setSelectedCategory] = useState<string>("全部");
   const [selectedYear, setSelectedYear] = useState<string>("全部");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortBy, setSortBy] = useState<SortOption>("date-desc");
   const [openMenu, setOpenMenu] = useState<"category" | "year" | "sort" | null>(
     null
@@ -124,12 +127,20 @@ export default function PostFilterSection(props: PostFilterSectionProps) {
   }, [posts]);
 
   const filteredPosts = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
     const filtered = posts.filter((post) => {
       const matchCategory =
         selectedCategory === "全部" || post.category === selectedCategory;
       const matchYear =
         selectedYear === "全部" || post.releaseYear === selectedYear;
-      return matchCategory && matchYear;
+
+      const matchSearch =
+        !q ||
+        post.title.toLowerCase().includes(q) ||
+        (post.excerpt && post.excerpt.toLowerCase().includes(q)) ||
+        (post.tags && post.tags.some((tag) => tag.toLowerCase().includes(q)));
+
+      return matchCategory && matchYear && matchSearch;
     });
 
     return [...filtered].sort((a, b) => {
@@ -168,28 +179,51 @@ export default function PostFilterSection(props: PostFilterSectionProps) {
   const currentSort =
     SORT_OPTIONS.find((opt) => opt.value === sortBy) || SORT_OPTIONS[0];
   const hasActiveFilter =
-    selectedCategory !== "全部" || selectedYear !== "全部";
+    selectedCategory !== "全部" || selectedYear !== "全部" || searchQuery.trim() !== "";
 
   return (
     <React.Fragment>
-      {/* 分隔線 + 全部文章標題 + 三合一精簡下拉控制列 */}
+      {/* 分隔線 + 全部文章標題 + 搜尋列與精簡下拉控制列 */}
       <div
         ref={controlsRef}
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3.5 pt-2 border-b border-slate-200/80 pb-4 dark:border-slate-800"
+        className="flex flex-col gap-3.5 pt-2 border-b border-slate-200/80 pb-4 dark:border-slate-800"
       >
-        {/* 左側標題（已放大字體並改為全部文章） */}
-        <div className="flex items-center gap-3">
-          <span className="inline-block h-6 w-1 rounded-full bg-amber-500 shrink-0" />
-          <h2 className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-200">
-            全部文章
-          </h2>
-          <span className="text-sm font-medium text-slate-400">
-            ({filteredPosts.length})
-          </span>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          {/* 左側標題 */}
+          <div className="flex items-center gap-3">
+            <span className="inline-block h-6 w-1 rounded-full bg-amber-500 shrink-0" />
+            <h2 className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-200">
+              全部文章
+            </h2>
+            <span className="text-sm font-medium text-slate-400">
+              ({filteredPosts.length})
+            </span>
+          </div>
+
+          {/* 右側：即時搜尋列 */}
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="搜尋電影、影集心得..."
+              className="w-full rounded-lg border border-slate-200 bg-white pl-8 pr-8 py-1.5 text-xs text-slate-800 placeholder-slate-400 shadow-sm focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:placeholder-slate-500 transition-all"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* 右側三個統一風格下拉選單：分類 / 上映年份 / 排序 */}
-        <div className="flex flex-wrap items-center gap-2">
+        {/* 下排三個統一風格下拉選單：分類 / 上映年份 / 排序 */}
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {/* 1. 分類下拉選單 */}
           {categories.length > 1 && (
             <div className="relative">
@@ -370,6 +404,7 @@ export default function PostFilterSection(props: PostFilterSectionProps) {
               onClick={() => {
                 setSelectedCategory("全部");
                 setSelectedYear("全部");
+                setSearchQuery("");
                 setOpenMenu(null);
               }}
               title="重設篩選條件"
@@ -391,9 +426,24 @@ export default function PostFilterSection(props: PostFilterSectionProps) {
       {filteredPosts.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-300 p-10 text-center text-sm text-slate-500 dark:border-slate-800">
           目前沒有符合「
-          {selectedCategory !== "全部" ? selectedCategory : "全部分類"}
+          {searchQuery ? `搜尋：${searchQuery}` : ""}
+          {selectedCategory !== "全部" ? `${searchQuery ? " · " : ""}${selectedCategory}` : ""}
           {selectedYear !== "全部" ? ` · ${selectedYear} 年` : ""}
           」條件的文章。
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedCategory("全部");
+                setSelectedYear("全部");
+                setSearchQuery("");
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3.5 py-1.5 text-xs font-medium text-white hover:bg-amber-600 transition-colors shadow-sm"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span>清除所有條件</span>
+            </button>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
