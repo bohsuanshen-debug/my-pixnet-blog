@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getAllPosts, getPostBySlug, getPageBlocks } from "@/lib/notion";
 import NotionRenderer from "@/components/NotionRenderer";
 import AdSense from "@/components/AdSense";
+import AmbientPostLayout from "@/components/AmbientPostLayout";
 import { formatDate, estimateReadingTime } from "@/lib/utils";
 import { ArrowLeft, Calendar, Clock, Film, Tag } from "lucide-react";
 
@@ -169,17 +170,17 @@ export default async function PostPage({
   };
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+    <AmbientPostLayout coverImage={post.coverImage}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
       {/* 返回按鈕 */}
-      <div className="mb-8">
+      <div className="mb-6">
         <Link
           href="/"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-amber-600 dark:text-slate-400 dark:hover:text-amber-400 transition-colors"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-neutral-600 hover:text-amber-600 dark:text-neutral-400 dark:hover:text-amber-500 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>返回文章列表</span>
@@ -187,17 +188,17 @@ export default async function PostPage({
       </div>
 
       {/* 文章標頭資訊 */}
-      <header className="mb-8 border-b border-slate-200/80 pb-8 dark:border-slate-800">
-        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mb-4">
+      <header className="mb-8 border-b border-neutral-200/80 pb-8 dark:border-neutral-800">
+        <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-600 dark:text-neutral-400 mb-4 font-medium">
           {post.category && (
-            <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2.5 py-1 font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+            <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-2.5 py-1 font-semibold text-amber-800 dark:bg-amber-400/10 dark:text-amber-300">
               <Film className="h-3 w-3" />
               {post.category}
             </span>
           )}
           {extractedYear && (
             <>
-              <span className="font-semibold text-slate-700 dark:text-slate-300">
+              <span className="font-semibold text-neutral-800 dark:text-neutral-200">
                 ({extractedYear})
               </span>
               <span>•</span>
@@ -217,11 +218,11 @@ export default async function PostPage({
         {/* 主標題區塊 */}
         <div className="space-y-2">
           {seriesPrefix && (
-            <p className="text-sm font-semibold tracking-wider text-amber-600 dark:text-amber-400">
+            <p className="text-sm font-semibold tracking-wider text-amber-700 dark:text-amber-400">
               {seriesPrefix}
             </p>
           )}
-          <h1 className="font-serif text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 whitespace-nowrap overflow-x-auto">
+          <h1 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 leading-snug">
             {cleanMainTitle}
           </h1>
         </div>
@@ -232,7 +233,7 @@ export default async function PostPage({
             {post.tags.map((tag) => (
               <span
                 key={tag}
-                className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
               >
                 <Tag className="h-3 w-3 opacity-60" />
                 {tag}
@@ -246,7 +247,7 @@ export default async function PostPage({
       <AdSense slotType="article-top" />
 
       {/* 核心文章內文渲染器 */}
-      <main className="my-8">
+      <main className="my-8 text-neutral-900 dark:text-neutral-100">
         <NotionRenderer
           blocks={blocks}
           insertInArticleAd={true}
@@ -256,6 +257,6 @@ export default async function PostPage({
 
       {/* 廣告版位 4：文章底部廣告 */}
       <AdSense slotType="article-bottom" />
-    </div>
+    </AmbientPostLayout>
   );
 }
