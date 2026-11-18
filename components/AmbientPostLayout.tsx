@@ -59,17 +59,17 @@ export default function AmbientPostLayout({
     >
       {/* 若有封面，在背景放一個高斯模糊巨幅光暈底圖（類似 iOS 鎖定畫面桌布散景） */}
       {coverImage && (
-        <div className="pointer-events-none fixed inset-0 overflow-hidden opacity-30 select-none z-0">
+        <div className="pointer-events-none fixed inset-0 overflow-hidden select-none z-0">
           <div
-            className="absolute -inset-[30%] bg-cover bg-center blur-[80px] scale-125 transform-gpu"
+            className="absolute -inset-[20%] bg-cover bg-center blur-[60px] opacity-45 scale-110 transform-gpu"
             style={{ backgroundImage: `url(${coverImage})` }}
           />
-          <div className="absolute inset-0 bg-black/25" />
+          <div className="absolute inset-0 bg-black/20" />
         </div>
       )}
 
       {/* ── iPhone 通知卡片材質 (iOS Liquid Glass Modal) ── */}
-      <div className="relative z-10 mx-auto max-w-4xl rounded-[28px] sm:rounded-[36px] border border-white/40 bg-white/60 p-6 sm:p-10 md:p-14 shadow-[0_20px_50px_rgba(0,0,0,0.18)] backdrop-blur-2xl backdrop-saturate-150 transition-all duration-300">
+      <div className="relative z-10 mx-auto max-w-4xl rounded-[28px] sm:rounded-[36px] ios-glass-card p-6 sm:p-10 md:p-14 transition-all duration-300">
         {/* 卡片頂部微反光倒角光邊 (模擬蘋果玻璃邊緣高光) */}
         <div className="pointer-events-none absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/80 to-transparent" />
         {children}
