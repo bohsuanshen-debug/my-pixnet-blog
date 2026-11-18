@@ -81,8 +81,8 @@ export default function AmbientPostLayout({
       {/* 柔化微噪點與氛圍微光覆蓋層 */}
       <div className="pointer-events-none absolute inset-0 bg-black/10 backdrop-brightness-[0.98]" />
 
-      {/* 置前文章主體卡片（半透明白底毛玻璃朦版） */}
-      <div className="relative mx-auto max-w-4xl rounded-2xl sm:rounded-3xl border border-white/60 bg-white/90 p-5 sm:p-8 md:p-12 shadow-2xl backdrop-blur-md transition-shadow">
+      {/* 置前文章主體卡片（半透明毛玻璃質感朦版：讓海報微光透出來，同時保有絕佳閱讀舒適度） */}
+      <div className="relative mx-auto max-w-4xl rounded-2xl sm:rounded-3xl border border-white/70 bg-white/78 p-6 sm:p-10 md:p-14 shadow-2xl backdrop-blur-xl ring-1 ring-black/5 dark:bg-slate-900/80 dark:border-white/10 transition-all duration-300">
         {children}
       </div>
     </div>

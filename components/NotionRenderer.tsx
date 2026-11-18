@@ -250,7 +250,7 @@ function ImageBlock({ block }: { block: any }) {
 
   return (
     <figure className="my-8 flex flex-col items-center">
-      <div className="relative max-w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-1 sm:p-1.5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+      <div className="relative max-w-full overflow-hidden rounded-2xl border border-white/60 bg-white/40 p-1.5 sm:p-2 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
         <img
           src={src}
           alt={caption || "文章插圖"}
@@ -441,7 +441,7 @@ export default function NotionRenderer({
         renderedElements.push(
           <div
             key={block.id}
-            className="my-6 flex gap-3.5 rounded-xl border border-slate-200 bg-slate-50/70 p-4 text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300"
+            className="my-6 flex gap-3.5 rounded-2xl border border-white/60 bg-white/45 p-4 text-slate-800 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
           >
             <span className="text-xl select-none">{icon}</span>
             <div className="flex-1 whitespace-pre-line leading-relaxed">
