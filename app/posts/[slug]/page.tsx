@@ -2,6 +2,7 @@ import React from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { getAllPosts, getPostBySlug, getPageBlocks } from "@/lib/notion";
 import NotionRenderer from "@/components/NotionRenderer";
 import AdSense from "@/components/AdSense";
@@ -187,60 +188,95 @@ export default async function PostPage({
         </Link>
       </div>
 
-      {/* 文章標頭資訊 */}
+      {/* 文章標頭資訊 + 直式封面海報 */}
       <header className="mb-8 border-b border-neutral-200/80 pb-8 dark:border-neutral-800">
-        <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-600 dark:text-neutral-400 mb-4 font-medium">
-          {post.category && (
-            <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-2.5 py-1 font-semibold text-amber-800 dark:bg-amber-400/10 dark:text-amber-300">
-              <Film className="h-3 w-3" />
-              {post.category}
-            </span>
-          )}
-          {extractedYear && (
-            <>
-              <span className="font-semibold text-neutral-800 dark:text-neutral-200">
-                ({extractedYear})
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-6">
+          {/* 左側：分類、日期、標題、評分與標籤 */}
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-600 dark:text-neutral-400 mb-4 font-medium">
+              {post.category && (
+                <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-2.5 py-1 font-semibold text-amber-800 dark:bg-amber-400/10 dark:text-amber-300">
+                  <Film className="h-3 w-3" />
+                  {post.category}
+                </span>
+              )}
+              {extractedYear && (
+                <>
+                  <span className="font-semibold text-neutral-800 dark:text-neutral-200">
+                    ({extractedYear})
+                  </span>
+                  <span>•</span>
+                </>
+              )}
+              <span className="flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5" />
+                <time dateTime={post.date}>{formatDate(post.date)}</time>
               </span>
               <span>•</span>
-            </>
-          )}
-          <span className="flex items-center gap-1">
-            <Calendar className="h-3.5 w-3.5" />
-            <time dateTime={post.date}>{formatDate(post.date)}</time>
-          </span>
-          <span>•</span>
-          <span className="flex items-center gap-1">
-            <Clock className="h-3.5 w-3.5" />
-            約 {readingTime} 分鐘閱讀
-          </span>
-        </div>
-
-        {/* 主標題區塊 */}
-        <div className="space-y-2">
-          {seriesPrefix && (
-            <p className="text-sm font-semibold tracking-wider text-amber-700 dark:text-amber-400">
-              {seriesPrefix}
-            </p>
-          )}
-          <h1 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 leading-snug">
-            {cleanMainTitle}
-          </h1>
-        </div>
-
-        {/* 標籤 */}
-        {post.tags && post.tags.length > 0 && (
-          <div className="mt-5 flex flex-wrap gap-2">
-            {post.tags.map((tag) => (
-              <span
-                key={tag}
-                className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
-              >
-                <Tag className="h-3 w-3 opacity-60" />
-                {tag}
+              <span className="flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5" />
+                約 {readingTime} 分鐘閱讀
               </span>
-            ))}
+            </div>
+
+            {/* 主標題區塊 */}
+            <div className="space-y-2">
+              {seriesPrefix && (
+                <p className="text-sm font-semibold tracking-wider text-amber-700 dark:text-amber-400">
+                  {seriesPrefix}
+                </p>
+              )}
+              <h1 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 leading-snug">
+                {cleanMainTitle}
+              </h1>
+            </div>
+
+            {/* 評分膠囊（若有設定） */}
+            {(post.watchScore !== undefined || post.recommendScore !== undefined) && (
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                {post.watchScore !== undefined && (
+                  <span className="inline-flex items-center rounded-md border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-800 dark:border-amber-400/25 dark:bg-amber-400/10 dark:text-amber-300">
+                    超主觀評分 {post.watchScore}/100
+                  </span>
+                )}
+                {post.recommendScore !== undefined && (
+                  <span className="inline-flex items-center rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:border-emerald-400/25 dark:bg-emerald-400/10 dark:text-emerald-300">
+                    爆米花指數 {post.recommendScore}/10
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* 標籤 */}
+            {post.tags && post.tags.length > 0 && (
+              <div className="mt-5 flex flex-wrap gap-2">
+                {post.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
+                  >
+                    <Tag className="h-3 w-3 opacity-60" />
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
-        )}
+
+          {/* 右側：電影／影集直式封面海報 */}
+          {post.coverImage && (
+            <div className="relative mx-auto sm:mx-0 h-56 w-40 sm:h-60 sm:w-42 shrink-0 overflow-hidden rounded-2xl border border-white/60 bg-neutral-100 shadow-md dark:border-neutral-700/60 dark:bg-neutral-800">
+              <Image
+                src={post.coverImage}
+                alt={post.title}
+                fill
+                sizes="(max-width: 640px) 160px, 168px"
+                className="object-cover"
+                priority
+              />
+            </div>
+          )}
+        </div>
       </header>
 
       {/* 廣告版位 2：文章頁頂部廣告 */}
