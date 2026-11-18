@@ -28,6 +28,8 @@ interface PostFilterSectionProps {
   posts: BlogPost[];
 }
 
+const CATEGORY_OPTIONS = ["全部", "電影評論", "影集心得", "其他"];
+
 const SORT_OPTIONS: {
   value: SortOption;
   label: string;
@@ -98,14 +100,11 @@ export default function PostFilterSection(props: PostFilterSectionProps) {
 
   const controlsRef = useRef<HTMLDivElement>(null);
 
-  // 監聽 Header 導覽列傳入的 ?category=... 參數並同步套用
   useEffect(() => {
     const paramCat = searchParams.get("category");
-    if (paramCat) {
-      setSelectedCategory(paramCat);
-    } else {
-      setSelectedCategory("全部");
-    }
+    setSelectedCategory(
+      paramCat && CATEGORY_OPTIONS.includes(paramCat) ? paramCat : "全部"
+    );
   }, [searchParams]);
 
   useEffect(() => {
@@ -121,18 +120,6 @@ export default function PostFilterSection(props: PostFilterSectionProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // 統一提供「全部、電影、影評、其他」以及其餘資料庫分類
-  const categories = useMemo(() => {
-    const validCats = posts
-      .map((p) => p.category)
-      .filter((cat): cat is string => Boolean(cat && cat.trim() !== ""));
-    const base = ["全部", "電影", "影評", "其他"];
-    const extra = Array.from(new Set(validCats)).filter(
-      (c) => !base.includes(c)
-    );
-    return [...base, ...extra];
-  }, [posts]);
-
   const releaseYears = useMemo(() => {
     const validYears = posts
       .map((p) => p.releaseYear)
@@ -147,21 +134,12 @@ export default function PostFilterSection(props: PostFilterSectionProps) {
     const q = searchQuery.trim().toLowerCase();
     const filtered = posts.filter((post) => {
       const cat = (post.category || "").trim();
-      let matchCategory = false;
-
-      if (selectedCategory === "全部") {
-        matchCategory = true;
-      } else if (selectedCategory === "電影") {
-        matchCategory = cat === "電影" || cat.includes("電影");
-      } else if (selectedCategory === "影評") {
-        matchCategory = cat === "影評" || cat.includes("影評");
-      } else if (selectedCategory === "其他") {
-        const isMovie = cat === "電影" || cat.includes("電影");
-        const isReview = cat === "影評" || cat.includes("影評");
-        matchCategory = !isMovie && !isReview;
-      } else {
-        matchCategory = cat === selectedCategory;
-      }
+      const matchCategory =
+        selectedCategory === "全部"
+          ? true
+          : selectedCategory === "其他"
+          ? cat !== "電影評論" && cat !== "影集心得"
+          : cat === selectedCategory;
 
       const matchYear =
         selectedYear === "全部" || post.releaseYear === selectedYear;
@@ -217,13 +195,11 @@ export default function PostFilterSection(props: PostFilterSectionProps) {
 
   return (
     <section id="all-posts" className="scroll-mt-20 space-y-6">
-      {/* 分隔線 + 全部文章標題 + 搜尋列與精簡下拉控制列 */}
       <div
         ref={controlsRef}
         className="flex flex-col gap-3.5 pt-2 border-b border-slate-200/80 pb-4 dark:border-slate-800"
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          {/* 左側標題 */}
           <div className="flex items-center gap-3">
             <span className="inline-block h-6 w-1 rounded-full bg-amber-500 shrink-0" />
             <h2 className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-200">
@@ -234,7 +210,6 @@ export default function PostFilterSection(props: PostFilterSectionProps) {
             </span>
           </div>
 
-          {/* 右側：即時搜尋列 */}
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
             <input
@@ -256,60 +231,55 @@ export default function PostFilterSection(props: PostFilterSectionProps) {
           </div>
         </div>
 
-        {/* 下排三個統一風格下拉選單：分類 / 上映年份 / 排序 */}
         <div className="flex flex-wrap items-center justify-end gap-2">
-          {/* 1. 分類下拉選單 */}
-          {categories.length > 1 && (
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() =>
-                  setOpenMenu((prev) =>
-                    prev === "category" ? null : "category"
-                  )
-                }
-                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
-                  selectedCategory !== "全部"
-                    ? "border-amber-500/40 bg-amber-50 text-amber-800 dark:border-amber-400/30 dark:bg-amber-950/50 dark:text-amber-300"
-                    : "border-slate-200/80 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+          {/* 1. 分類下拉選單（與 Header 四大分類完全一致） */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() =>
+                setOpenMenu((prev) => (prev === "category" ? null : "category"))
+              }
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                selectedCategory !== "全部"
+                  ? "border-amber-500/40 bg-amber-50 text-amber-800 dark:border-amber-400/30 dark:bg-amber-950/50 dark:text-amber-300"
+                  : "border-slate-200/80 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              }`}
+            >
+              <FolderOpen className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+              <span>
+                {selectedCategory === "全部" ? "全部分類" : selectedCategory}
+              </span>
+              <ChevronDown
+                className={`h-3.5 w-3.5 opacity-60 transition-transform ${
+                  openMenu === "category" ? "rotate-180" : ""
                 }`}
-              >
-                <FolderOpen className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-                <span>
-                  {selectedCategory === "全部" ? "全部分類" : selectedCategory}
-                </span>
-                <ChevronDown
-                  className={`h-3.5 w-3.5 opacity-60 transition-transform ${
-                    openMenu === "category" ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
+              />
+            </button>
 
-              {openMenu === "category" && (
-                <div className="absolute left-0 sm:right-0 sm:left-auto z-30 mt-2 w-40 origin-top rounded-xl border border-slate-200/80 bg-white py-1.5 shadow-lg ring-1 ring-black/5 dark:border-slate-800 dark:bg-slate-900">
-                  <div className="px-3 py-1 text-[11px] font-semibold tracking-wider text-slate-400">
-                    文章分類
-                  </div>
-                  {categories.map((cat) => (
-                    <button
-                      key={cat}
-                      type="button"
-                      onClick={() => {
-                        setSelectedCategory(cat);
-                        setOpenMenu(null);
-                      }}
-                      className="flex w-full items-center justify-between px-3.5 py-2 text-left text-xs text-slate-700 transition-colors hover:bg-amber-50 hover:text-amber-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-amber-400"
-                    >
-                      <span>{cat === "全部" ? "全部分類" : cat}</span>
-                      {selectedCategory === cat && (
-                        <Check className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-                      )}
-                    </button>
-                  ))}
+            {openMenu === "category" && (
+              <div className="absolute left-0 sm:right-0 sm:left-auto z-30 mt-2 w-40 origin-top rounded-xl border border-slate-200/80 bg-white py-1.5 shadow-lg ring-1 ring-black/5 dark:border-slate-800 dark:bg-slate-900">
+                <div className="px-3 py-1 text-[11px] font-semibold tracking-wider text-slate-400">
+                  文章分類
                 </div>
-              )}
-            </div>
-          )}
+                {CATEGORY_OPTIONS.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory(cat);
+                      setOpenMenu(null);
+                    }}
+                    className="flex w-full items-center justify-between px-3.5 py-2 text-left text-xs text-slate-700 transition-colors hover:bg-amber-50 hover:text-amber-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-amber-400"
+                  >
+                    <span>{cat === "全部" ? "全部分類" : cat}</span>
+                    {selectedCategory === cat && (
+                      <Check className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* 2. 上映年份下拉選單 */}
           {releaseYears.length > 1 && (
@@ -362,7 +332,7 @@ export default function PostFilterSection(props: PostFilterSectionProps) {
             </div>
           )}
 
-          {/* 3. 排序下拉選單（發布日期 + 沈伯的評分排序） */}
+          {/* 3. 排序下拉選單 */}
           <div className="relative">
             <button
               type="button"
@@ -431,7 +401,6 @@ export default function PostFilterSection(props: PostFilterSectionProps) {
             )}
           </div>
 
-          {/* 清除篩選快捷按鈕 */}
           {hasActiveFilter && (
             <button
               type="button"
@@ -451,12 +420,10 @@ export default function PostFilterSection(props: PostFilterSectionProps) {
         </div>
       </div>
 
-      {/* 廣告版位：In-Feed */}
       <div className="-mt-2">
         <AdSense slotType="in-feed" />
       </div>
 
-      {/* 文章 2 欄卡片 */}
       {filteredPosts.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-300 p-10 text-center text-sm text-slate-500 dark:border-slate-800">
           目前沒有符合「
