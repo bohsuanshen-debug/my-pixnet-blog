@@ -5,7 +5,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://www.bhmoviediary.com"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://bhmoviediary.com"),
   title: {
     default: "影視戴爾瑞 | 電影影集心得分享",
     template: "%s | 影視戴爾瑞",
