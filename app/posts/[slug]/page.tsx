@@ -65,7 +65,7 @@ export async function generateMetadata({
       return { title: "文章不存在" };
     }
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://moviesdiary.vercel.app";
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.bhmoviediary.com";
     const postUrl = `${siteUrl}/posts/${post.slug}`;
     const description =
       post.excerpt || `${post.title} - 由戴爾瑞撰寫的深度影評與觀後心得。`;
@@ -140,7 +140,7 @@ export default async function PostPage({
 
   const extractedYear = post.releaseYear || extractMovieYear(post.title, blocks);
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://moviesdiary.vercel.app";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.bhmoviediary.com";
   const postUrl = `${siteUrl}/posts/${post.slug}`;
   const jsonLd = {
     "@context": "https://schema.org",
