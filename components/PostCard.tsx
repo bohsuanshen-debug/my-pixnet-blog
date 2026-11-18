@@ -10,7 +10,7 @@ export default function PostCard({ post }: { post: BlogPost }) {
     post.watchScore !== undefined || post.recommendScore !== undefined;
 
   return (
-    <article className="group relative flex items-center justify-between gap-4 sm:gap-5 overflow-hidden rounded-2xl border border-white/60 bg-white/75 p-4 sm:p-5 shadow-sm backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-amber-400/60 hover:bg-white/90 hover:shadow-md dark:border-slate-800/80 dark:bg-slate-900/60 dark:backdrop-blur-md dark:hover:border-amber-700 dark:hover:bg-slate-900/80">
+    <article className="group relative flex items-center justify-between gap-4 sm:gap-5 overflow-hidden rounded-2xl border border-white/40 bg-white/45 p-4 sm:p-5 shadow-sm backdrop-blur-lg transition-all duration-300 hover:-translate-y-1 hover:border-amber-400/60 hover:bg-white/70 hover:shadow-md dark:border-slate-800/60 dark:bg-slate-900/40 dark:backdrop-blur-lg dark:hover:border-amber-700 dark:hover:bg-slate-900/60">
       {/* 左側：文章元資料、標題、評分與標籤 */}
       <div className="flex flex-1 min-w-0 flex-col justify-between self-stretch">
         <div>
@@ -58,7 +58,7 @@ export default function PostCard({ post }: { post: BlogPost }) {
             {post.tags.slice(0, 2).map((tag) => (
               <span
                 key={tag}
-                className="inline-flex items-center gap-0.5 rounded-full bg-slate-200/60 px-2 py-0.5 text-[11px] text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                className="inline-flex items-center gap-0.5 rounded-full bg-slate-200/50 px-2 py-0.5 text-[11px] text-slate-600 dark:bg-slate-800/60 dark:text-slate-400"
               >
                 <Tag className="h-2.5 w-2.5 opacity-60" />
                 {tag}
@@ -69,7 +69,7 @@ export default function PostCard({ post }: { post: BlogPost }) {
       </div>
 
       {/* 右側：直式電影海報縮圖 */}
-      <div className="relative h-28 w-[76px] sm:h-36 sm:w-24 shrink-0 overflow-hidden rounded-xl bg-slate-100 shadow-sm dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/50">
+      <div className="relative h-28 w-[76px] sm:h-36 sm:w-24 shrink-0 overflow-hidden rounded-xl bg-slate-100/50 shadow-sm dark:bg-slate-800/50 border border-slate-200/40 dark:border-slate-700/40">
         {post.coverImage ? (
           <Image
             src={post.coverImage}
