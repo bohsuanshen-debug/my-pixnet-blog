@@ -99,7 +99,7 @@ function mapNotionPageToPost(page: any): BlogPost {
   const title =
     props.Name?.title?.[0]?.plain_text ||
     props.Title?.title?.[0]?.plain_text ||
-    "無標題";
+    "";
 
   const date = props.Date?.date?.start || page.created_time || "";
   const category = props.Category?.select?.name || "未分類";
@@ -119,12 +119,24 @@ function mapNotionPageToPost(page: any): BlogPost {
     if (titleYear) releaseYear = titleYear[0];
   }
 
+  // 同時支援 Notion 頁面頂部 Cover 與資料庫的 Files 圖片欄位
   let coverImage = "";
   if (page.cover) {
-    if (page.cover.type === "external") {
-      coverImage = page.cover.external?.url || "";
-    } else if (page.cover.type === "file") {
-      coverImage = page.cover.file?.url || "";
+    coverImage =
+      page.cover.type === "external"
+        ? page.cover.external?.url || ""
+        : page.cover.file?.url || "";
+  }
+  if (!coverImage) {
+    const fileProp = Object.values(props).find(
+      (p: any) => p?.type === "files" && Array.isArray(p.files) && p.files.length > 0
+    ) as any;
+    if (fileProp) {
+      const firstFile = fileProp.files[0];
+      coverImage =
+        firstFile.type === "external"
+          ? firstFile.external?.url || ""
+          : firstFile.file?.url || "";
     }
   }
 
@@ -176,7 +188,8 @@ export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
 
       const posts = allPages
         .filter((page: any) => page.properties && page.object === "page")
-        .map(mapNotionPageToPost);
+        .map(mapNotionPageToPost)
+        .filter((post) => post.title.trim() !== ""); // 自動排除 Notion 中的空白草稿列
 
       // 本地端依日期由新到舊排序（比讓 Notion 資料庫端排序更快、且不會漏掉無日期文章）
       posts.sort((a, b) => {
@@ -217,7 +230,8 @@ export const getPostBySlug = cache(async (slug: string): Promise<BlogPost | null
     try {
       const page: any = await notion.pages.retrieve({ page_id: cleanSlug });
       if (page && page.properties && !page.archived && !page.in_trash) {
-        return mapNotionPageToPost(page);
+        const mapped = mapNotionPageToPost(page);
+        return mapped.title.trim() !== "" ? mapped : null;
       }
     } catch (error) {
       console.warn(`直接讀取 Notion Page 失敗 (${cleanSlug}):`, error);
