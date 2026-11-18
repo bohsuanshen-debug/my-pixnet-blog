@@ -1,119 +1,113 @@
 import React from "react";
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
-import { Film, Clapperboard, Heart, Sparkles, BookOpen, MessageCircle } from "lucide-react";
+import { ArrowLeft, Film, Sparkles, Popcorn, Heart } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "關於我們 (About Us)",
-  description: "影視戴爾瑞站長簡介、創作初衷、內容原創性承諾與影視評論理念。",
+  title: "關於《影視戴爾瑞》與沈伯｜影視戴爾瑞",
+  description:
+    "在這裡沒有高深的電影理論，單純記錄看過的電影、影集、MV 與遊戲心得，分享最真實的主觀感想與爆米花指數。",
 };
 
 export default function AboutPage() {
   return (
-    <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
-      {/* 頂部標題 */}
-      <div className="mb-10 text-center sm:text-left border-b border-slate-200 pb-8 dark:border-slate-800">
-        <div className="inline-flex items-center gap-2 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-400/10 dark:text-amber-300 mb-3">
-          <Clapperboard className="h-4 w-4" />
-          <span>關於本站與創作者</span>
-        </div>
-        <h1 className="font-serif text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-          關於【影視戴爾瑞】
-        </h1>
-        <p className="mt-3 text-base text-slate-600 dark:text-slate-400">
-          用文字銘刻光影的溫度，紀錄大銀幕與串流劇集裡最真摯的感動瞬間。
-        </p>
+    <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+      {/* 返回首頁 */}
+      <div className="mb-8">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-amber-600 dark:text-slate-400 dark:hover:text-amber-400 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span>返回文章列表</span>
+        </Link>
       </div>
 
-      {/* 核心介紹區塊 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start mb-12">
-        <div className="flex flex-col items-center text-center p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
-          <div className="relative h-28 w-28 overflow-hidden rounded-full border-2 border-amber-500/30 mb-4 shadow">
-            <Image
-              src="/logo.jpg"
-              alt="影視戴爾瑞 Logo"
-              fill
-              className="object-cover"
-            />
+      {/* 頁面主卡片 */}
+      <article className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-10 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+        {/* 頂部標籤與主標題 */}
+        <header className="border-b border-slate-200/80 pb-6 dark:border-slate-800">
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-400/10 dark:text-amber-300 mb-3">
+            <Sparkles className="h-3.5 w-3.5" />
+            <span>ABOUT</span>
           </div>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-            戴爾瑞 (Bohsuan)
-          </h2>
-          <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-1">
-            影評作家 / 影視愛好者
+          <h1 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+            關於《影視戴爾瑞》與沈伯
+          </h1>
+        </header>
+
+        {/* 內文段落 */}
+        <div className="mt-7 space-y-5 text-[16.5px] sm:text-[17px] leading-[1.9] text-slate-700 dark:text-slate-300">
+          <p className="font-medium text-slate-900 dark:text-slate-100">
+            嗨，大家好，我是沈伯！
           </p>
-          <div className="mt-4 flex gap-2">
+
+          <p>
+            在這裡沒有什麼高深的電影理論，也沒有那種「一定要看懂才算懂電影」的包袱。對我來說，這裡單純就是一個用來記錄我看過哪些電影、影集、MV 或是玩過什麼遊戲的小天地。
+          </p>
+
+          <p>
+            平常下班後最放鬆的事，就是挑部片來看、挑個遊戲來打，然後把當下最真實的感想寫下來。其實作品好不好看本來就很主觀——有時候一部片爽度夠、節奏抓得恰到好處，就算劇情裡有點小瑕疵，我還是會看得很開心；反過來說，如果哪裡覺得不對勁，我也會老老實實地把缺點寫出來。
+          </p>
+
+          <p>為了讓每篇心得看起來更直覺，我在文章最後都會附上兩個指標：</p>
+
+          {/* 雙指標特色卡片 */}
+          <div className="my-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 sm:p-5 dark:border-emerald-400/20 dark:bg-emerald-950/20">
+              <div className="flex items-center gap-2 font-semibold text-emerald-700 dark:text-emerald-300 mb-1.5">
+                <Popcorn className="h-4 w-4 shrink-0" />
+                <span>◆ 爆米花指數</span>
+              </div>
+              <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+                純粹看這部作品的娛樂性、節奏與爽度，適不適合配爆米花輕鬆看。
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 sm:p-5 dark:border-amber-400/20 dark:bg-amber-950/20">
+              <div className="flex items-center gap-2 font-semibold text-amber-700 dark:text-amber-300 mb-1.5">
+                <Heart className="h-4 w-4 shrink-0" />
+                <span>◆ 超主觀評分</span>
+              </div>
+              <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+                完全代表我個人當下的喜好程度，沒有標準答案，純屬個人偏愛。
+              </p>
+            </div>
+          </div>
+
+          <p>
+            如果你也喜歡看片、追劇，或者剛好對同一部作品有不一樣的看法，都非常歡迎隨時找我聊聊~
+          </p>
+        </div>
+
+        {/* 底部社群導流區（與文章內文風格一致） */}
+        <footer className="mt-8 border-t border-slate-200/80 pt-6 space-y-2.5 text-[16px] text-slate-700 dark:border-slate-800 dark:text-slate-300">
+          <p>
+            喜歡的朋友快到FB給
             <a
               href="https://www.facebook.com/bohsuanmoviediary"
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-300"
+              className="font-semibold text-blue-600 underline underline-offset-4 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
             >
-              FB 粉專
+              【影視戴爾瑞】
             </a>
+            一個讚👍
+          </p>
+          <p>
+            更多影視分享，請到
             <a
               href="https://www.instagram.com/bh_moviediary"
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-lg bg-pink-50 px-2.5 py-1 text-xs font-medium text-pink-700 hover:bg-pink-100 dark:bg-pink-950/40 dark:text-pink-300"
+              className="font-semibold text-pink-600 underline underline-offset-4 hover:text-pink-700 dark:text-pink-400 dark:hover:text-pink-300 transition-colors"
             >
-              Instagram
+              【影視戴爾瑞】
             </a>
-          </div>
-        </div>
-
-        <div className="md:col-span-2 space-y-4 text-base leading-relaxed text-slate-700 dark:text-slate-300">
-          <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-amber-500" />
-            創立初衷：為什麼會有「影視戴爾瑞」？
-          </h3>
-          <p>
-            電影與影集不只是消遣時光的娛樂，很多時候它是一面鏡子，映照出我們在生活、職場、感情裡難以啟齒的困惑與情感。「影視戴爾瑞」起源於站長在各大社群平台的觀影隨筆，期盼透過平實、真誠且不隨波逐流的視角，帶領讀者看見角色內心的掙扎與主創團隊想傳遞的哲學。
+            Instagram
           </p>
-          <p>
-            從原本在痞客邦累積的大量長文心得，到如今全新升級的獨立站台，我們始終秉持<strong>「每篇文章均親筆手寫、拒絕農場文與無腦抄襲」</strong>的初衷，提供喜愛電影的朋友一個乾淨、純粹的閱讀殿堂。
-          </p>
-        </div>
-      </div>
-
-      {/* 內容與品質承諾 */}
-      <div className="space-y-6 rounded-2xl bg-slate-100/70 p-6 sm:p-8 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 mb-12">
-        <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-          <Heart className="h-5 w-5 text-red-500" />
-          我們的創作方針與品質承諾
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-slate-600 dark:text-slate-400">
-          <div className="p-4 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700">
-            <div className="font-semibold text-slate-900 dark:text-slate-100 mb-1 flex items-center gap-1.5">
-              <BookOpen className="h-4 w-4 text-amber-500" />
-              100% 原創深度解析
-            </div>
-            所有影評與短評皆出自站長實際觀看後的反思整理，包含劇情結構探討、演員表現評價及核心隱喻剖析。
-          </div>
-          <div className="p-4 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700">
-            <div className="font-semibold text-slate-900 dark:text-slate-100 mb-1 flex items-center gap-1.5">
-              <Film className="h-4 w-4 text-amber-500" />
-              多元類型影視涵蓋
-            </div>
-            從院線好萊塢商業大片、金馬獨立藝術電影，到 Netflix、Disney+ 國內外熱門話題影集，提供全方位觀影指南。
-          </div>
-        </div>
-      </div>
-
-      {/* 底部導引 */}
-      <div className="text-center pt-4">
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-          有商業合作、文章轉載需求，或是單純想聊聊電影？
-        </p>
-        <Link
-          href="/contact"
-          className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-amber-500 transition-colors"
-        >
-          <MessageCircle className="h-4 w-4" />
-          聯繫我們
-        </Link>
-      </div>
+        </footer>
+      </article>
     </div>
   );
 }
