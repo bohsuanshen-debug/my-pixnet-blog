@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { GoogleAnalytics } from '@next/third-parties/google';
+import { GoogleAnalytics } from "@next/third-parties/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -66,9 +67,12 @@ export default function RootLayout({
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
-        
+
         {/* ── GA4 追蹤碼 ── */}
         <GoogleAnalytics gaId="G-93Q9T0VBMF" />
+
+        {/* ── Vercel Speed Insights ── */}
+        <SpeedInsights />
       </body>
     </html>
   );
