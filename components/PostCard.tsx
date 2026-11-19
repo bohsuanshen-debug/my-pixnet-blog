@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { BlogPost } from "@/lib/notion";
 import { formatDate } from "@/lib/utils";
-import { Calendar, Film, Tag } from "lucide-react";
+import { Calendar, Film } from "lucide-react";
 
 function parseMovieTitleAndSubtitle(title: string): {
   mainTitle: string;
@@ -60,21 +60,6 @@ export default function PostCard({ post }: { post: BlogPost }) {
             <p className="mt-1 truncate text-xs sm:text-sm text-slate-700/90 dark:text-slate-300/90">
               {subtitle}
             </p>
-          )}
-
-          {/* 底部標籤（若有） */}
-          {post.tags && post.tags.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {post.tags.slice(0, 2).map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center gap-0.5 rounded-full bg-white/30 px-2 py-0.5 text-[11px] text-slate-700 dark:bg-slate-800/40 dark:text-slate-300 border border-white/30 dark:border-slate-700/30"
-                >
-                  <Tag className="h-2.5 w-2.5 opacity-60" />
-                  {tag}
-                </span>
-              ))}
-            </div>
           )}
         </div>
 
