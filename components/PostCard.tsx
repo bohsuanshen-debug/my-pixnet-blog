@@ -10,14 +10,14 @@ export default function PostCard({ post }: { post: BlogPost }) {
     post.watchScore !== undefined || post.recommendScore !== undefined;
 
   return (
-    <article className="group relative flex items-center justify-between gap-4 sm:gap-5 overflow-hidden rounded-2xl border border-white/50 bg-white/25 p-4 sm:p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-2xl transition-all duration-300 hover:-translate-y-1 hover:border-white hover:bg-white/40 hover:shadow-xl dark:border-slate-700/40 dark:bg-slate-900/25 dark:backdrop-blur-2xl dark:hover:border-slate-500 dark:hover:bg-slate-900/40">
-      {/* 左側：文章元資料、標題、評分與標籤 */}
-      <div className="flex flex-1 min-w-0 flex-col justify-between self-stretch">
+    <article className="group relative flex items-stretch justify-between gap-4 sm:gap-5 overflow-hidden rounded-2xl border border-white/50 bg-white/25 p-4 sm:p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-2xl transition-all duration-300 hover:-translate-y-1 hover:border-white hover:bg-white/40 hover:shadow-xl dark:border-slate-700/40 dark:bg-slate-900/25 dark:backdrop-blur-2xl dark:hover:border-slate-500 dark:hover:bg-slate-900/40">
+      {/* 左側：文章元資料、標題置頂；評分指標貼齊封面底部 */}
+      <div className="flex flex-1 min-w-0 flex-col justify-between">
         <div>
           {/* 分類與發布日期 */}
           <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
             {post.category && (
-              <span className="inline-flex items-center rounded-md bg-white/40 dark:bg-white/10 px-2.5 py-0.5 font-medium text-amber-800 dark:text-amber-300 border border-white/50 dark:border-white/10">
+              <span className="inline-flex items-center rounded-md bg-white/45 dark:bg-white/10 px-2.5 py-0.5 font-medium text-[#455230] dark:text-amber-300 border border-white/50 dark:border-white/10">
                 {post.category}
               </span>
             )}
@@ -28,47 +28,47 @@ export default function PostCard({ post }: { post: BlogPost }) {
           </div>
 
           {/* 標題 */}
-          <h2 className="mt-2 font-sans text-base sm:text-[17px] font-semibold leading-snug text-slate-900 group-hover:text-amber-700 dark:text-slate-100 dark:group-hover:text-amber-400 transition-colors line-clamp-2">
+          <h2 className="mt-2 font-sans text-base sm:text-[17px] font-semibold leading-snug text-slate-900 group-hover:text-[#455230] dark:text-slate-100 dark:group-hover:text-amber-400 transition-colors line-clamp-2">
             <Link href={`/posts/${post.slug}`} className="focus:outline-none">
               <span className="absolute inset-0" aria-hidden="true" />
               {post.title}
             </Link>
           </h2>
 
-          {/* 自動顯示超主觀評分與爆米花指數 */}
-          {hasRatings && (
-            <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-              {post.watchScore !== undefined && (
-                <span className="inline-flex items-center rounded-md border border-amber-500/30 bg-white/40 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-950/40 dark:border-amber-400/30 dark:text-amber-300">
-                  超主觀評分 {post.watchScore}/100
+          {/* 底部標籤（若有） */}
+          {post.tags && post.tags.length > 0 && (
+            <div className="mt-2.5 flex flex-wrap gap-1.5">
+              {post.tags.slice(0, 2).map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-0.5 rounded-full bg-white/30 px-2 py-0.5 text-[11px] text-slate-700 dark:bg-slate-800/40 dark:text-slate-300 border border-white/30 dark:border-slate-700/30"
+                >
+                  <Tag className="h-2.5 w-2.5 opacity-60" />
+                  {tag}
                 </span>
-              )}
-              {post.recommendScore !== undefined && (
-                <span className="inline-flex items-center rounded-md border border-emerald-500/30 bg-white/40 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-400/30 dark:text-emerald-300">
-                  爆米花指數 {post.recommendScore}/10
-                </span>
-              )}
+              ))}
             </div>
           )}
         </div>
 
-        {/* 底部標籤 */}
-        {post.tags && post.tags.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5 pt-1">
-            {post.tags.slice(0, 2).map((tag) => (
-              <span
-                key={tag}
-                className="inline-flex items-center gap-0.5 rounded-full bg-white/30 px-2 py-0.5 text-[11px] text-slate-700 dark:bg-slate-800/40 dark:text-slate-300 border border-white/30 dark:border-slate-700/30"
-              >
-                <Tag className="h-2.5 w-2.5 opacity-60" />
-                {tag}
+        {/* 放大的雙指標：與右側封面照底部貼齊 */}
+        {hasRatings && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {post.watchScore !== undefined && (
+              <span className="inline-flex items-center rounded-lg border border-[#455230]/25 bg-[#455230] px-3 py-1 text-xs sm:text-[13px] font-semibold text-[#EBEBD8] shadow-xs dark:border-amber-400/30 dark:bg-amber-400/15 dark:text-amber-200">
+                超主觀評分 {post.watchScore}/100
               </span>
-            ))}
+            )}
+            {post.recommendScore !== undefined && (
+              <span className="inline-flex items-center rounded-lg border border-[#637545]/35 bg-[#EBEBD8]/85 px-3 py-1 text-xs sm:text-[13px] font-semibold text-[#455230] shadow-xs dark:border-emerald-400/30 dark:bg-emerald-950/50 dark:text-emerald-300">
+                爆米花指數 {post.recommendScore}/10
+              </span>
+            )}
           </div>
         )}
       </div>
 
-      {/* 右側：直式電影海報縮圖 */}
+      {/* 右側：直式電影／影集海報縮圖 */}
       <div className="relative h-28 w-[76px] sm:h-36 sm:w-24 shrink-0 overflow-hidden rounded-xl bg-white/20 shadow-xs dark:bg-slate-800/40 border border-white/60 dark:border-slate-700/50">
         {post.coverImage ? (
           <Image
