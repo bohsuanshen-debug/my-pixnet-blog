@@ -22,56 +22,38 @@ function extractCardTitle(title: string): string {
 function normalizeTitleForMatch(rawTitle: string): string {
   return rawTitle
     .toLowerCase()
-    .replace(/[（(][^）)]*[）)]/g, "") // 移除 (S2)、(下) 等括號後綴以利系列比對
+    .replace(/[（(][^）)]*[）)]/g, "") // 移除 (S2)、(下) 等括號後綴
     .replace(/[\s：:｜|·・\-—_!！?？,，.。]/g, "")
     .trim();
 }
 
-function extractSeriesBase(rawTitle: string): string {
-  const withoutParens = rawTitle.replace(/[（(][^）)]*[）)]/g, "").trim();
-  const splitMatch = withoutParens.split(/[：:｜|·・\-—]/)[0]?.trim() || withoutParens;
-  return splitMatch.toLowerCase();
-}
-
-function computeTitleSimilarityScore(titleA: string, titleB: string): number {
+/**
+ * 計算兩片名之間「最長連續相同字數」
+ * 門檻為 >= 3 個字才算有關聯，避免 2 字常見詞誤判
+ */
+function getLongestCommonSubstringLength(titleA: string, titleB: string): number {
   const normA = normalizeTitleForMatch(titleA);
   const normB = normalizeTitleForMatch(titleB);
-  if (!normA || !normB) return 0;
+  if (normA.length < 3 || normB.length < 3) return 0;
 
-  let score = 0;
-
-  // 1. 完整系列主名稱一致（例如「安眠書店」與「安眠書店(S2)」）
-  if (normA === normB) {
-    score += 50;
-  } else if (
-    (normA.length >= 2 && normB.includes(normA)) ||
-    (normB.length >= 2 && normA.includes(normB))
-  ) {
-    score += 35 + Math.min(normA.length, normB.length) * 2;
-  }
-
-  // 2. 冒號前系列前綴相同（例如「蜘蛛人：新宇宙」與「蜘蛛人：離家日」）
-  const seriesA = extractSeriesBase(titleA);
-  const seriesB = extractSeriesBase(titleB);
-  if (seriesA.length >= 2 && seriesA === seriesB) {
-    score += 25;
-  }
-
-  // 3. 連續 2 字詞組（Bigram）重疊數量越多，片名關聯度越高
-  if (normA.length >= 2 && normB.length >= 2) {
-    const bigramsA = new Set<string>();
-    for (let i = 0; i < normA.length - 1; i++) {
-      bigramsA.add(normA.slice(i, i + 2));
+  let maxLen = 0;
+  for (let i = 0; i < normA.length; i++) {
+    for (let j = 0; j < normB.length; j++) {
+      let k = 0;
+      while (
+        i + k < normA.length &&
+        j + k < normB.length &&
+        normA[i + k] === normB[j + k]
+      ) {
+        k += 1;
+      }
+      if (k > maxLen) {
+        maxLen = k;
+      }
     }
-    let sharedBigrams = 0;
-    for (let i = 0; i < normB.length - 1; i++) {
-      const bg = normB.slice(i, i + 2);
-      if (bigramsA.has(bg)) sharedBigrams += 1;
-    }
-    score += sharedBigrams * 4;
   }
 
-  return score;
+  return maxLen >= 3 ? maxLen : 0;
 }
 
 function matchesManualTarget(candidate: BlogPost, target: string): boolean {
@@ -96,10 +78,75 @@ function matchesManualTarget(candidate: BlogPost, target: string): boolean {
 }
 
 /**
+ * 第 3 格（及第 2 格無 3 字以上片名關聯時的備援）挑選邏輯：
+ * 相同標記（Tags）越多排越前面 → 手動推薦標記 → 片名 >= 3 字關聯 → 同分類 → 日期由新到舊
+ */
+function pickBestTagRelatedPost(
+  currentPost: BlogPost,
+  pool: BlogPost[],
+  currentMainTitle: string
+): BlogPost | undefined {
+  if (pool.length === 0) return undefined;
+
+  const manualTargets = currentPost.manualRecommendations || [];
+  const currentTags = new Set(
+    (currentPost.tags || []).map((t) => t.trim().toLowerCase()).filter(Boolean)
+  );
+
+  const scored = pool
+    .map((p) => {
+      const candidateUniqueTags = new Set(
+        (p.tags || []).map((t) => t.trim().toLowerCase()).filter(Boolean)
+      );
+      let sharedTagsCount = 0;
+      candidateUniqueTags.forEach((tag) => {
+        if (currentTags.has(tag)) sharedTagsCount += 1;
+      });
+
+      const isManual = manualTargets.some((target) => matchesManualTarget(p, target)) ? 1 : 0;
+      const commonTitleLen = getLongestCommonSubstringLength(
+        currentMainTitle,
+        extractCardTitle(p.title)
+      );
+      const sameCategory = currentPost.category && p.category === currentPost.category ? 1 : 0;
+      const timeWeight = new Date(p.date).getTime() || 0;
+      const isRelevant = sharedTagsCount > 0 || isManual > 0 || commonTitleLen >= 3;
+
+      return {
+        post: p,
+        isRelevant,
+        sharedTagsCount,
+        isManual,
+        commonTitleLen,
+        sameCategory,
+        timeWeight,
+      };
+    })
+    .filter((item) => item.isRelevant)
+    .sort((a, b) => {
+      if (b.sharedTagsCount !== a.sharedTagsCount) {
+        return b.sharedTagsCount - a.sharedTagsCount;
+      }
+      if (b.isManual !== a.isManual) {
+        return b.isManual - a.isManual;
+      }
+      if (b.commonTitleLen !== a.commonTitleLen) {
+        return b.commonTitleLen - a.commonTitleLen;
+      }
+      if (b.sameCategory !== a.sameCategory) {
+        return b.sameCategory - a.sameCategory;
+      }
+      return b.timeWeight - a.timeWeight;
+    });
+
+  return scored[0]?.post || pool[0];
+}
+
+/**
  * 3 個推薦槽位：
  * 第 1 格：最新相同分類的文章
- * 第 2 格：片名相關越多的文章（不足則補最新文章）
- * 第 3 格：相同標記（Tags）越多的文章（其次手動標記、片名交集、同分類與日期；不足則補最新文章）
+ * 第 2 格：片名連續 3 個字以上相同且共同字數最多的文章；若無則比照第 3 格機制
+ * 第 3 格：相同標記（Tags）越多的文章（不足則補最新文章）
  */
 function getRelatedPosts(currentPost: BlogPost, allPosts: BlogPost[]): BlogPost[] {
   const candidates = allPosts
@@ -121,20 +168,22 @@ function getRelatedPosts(currentPost: BlogPost, allPosts: BlogPost[]): BlogPost[
     pickedIds.add(candidates[0].id);
   }
 
-  // ── 第 2 格：片名相關越多的文章 ──
+  // ── 第 2 格：片名連續 3 個字以上相同的文章（共同字數越多越前面）；若無則比照第 3 格 ──
   const currentMainTitle = extractCardTitle(currentPost.title);
   const slot2Pool = candidates.filter((p) => !pickedIds.has(p.id));
   const titleMatched = slot2Pool
     .map((p) => {
-      const targetMainTitle = extractCardTitle(p.title);
-      const titleScore = computeTitleSimilarityScore(currentMainTitle, targetMainTitle);
+      const commonLen = getLongestCommonSubstringLength(
+        currentMainTitle,
+        extractCardTitle(p.title)
+      );
       const sameCategory = currentPost.category && p.category === currentPost.category ? 1 : 0;
       const timeWeight = new Date(p.date).getTime() || 0;
-      return { post: p, titleScore, sameCategory, timeWeight };
+      return { post: p, commonLen, sameCategory, timeWeight };
     })
-    .filter((item) => item.titleScore > 0)
+    .filter((item) => item.commonLen >= 3)
     .sort((a, b) => {
-      if (b.titleScore !== a.titleScore) return b.titleScore - a.titleScore;
+      if (b.commonLen !== a.commonLen) return b.commonLen - a.commonLen;
       if (b.sameCategory !== a.sameCategory) return b.sameCategory - a.sameCategory;
       return b.timeWeight - a.timeWeight;
     });
@@ -142,70 +191,20 @@ function getRelatedPosts(currentPost: BlogPost, allPosts: BlogPost[]): BlogPost[
   if (titleMatched[0]) {
     result.push(titleMatched[0].post);
     pickedIds.add(titleMatched[0].post.id);
-  } else if (slot2Pool[0]) {
-    result.push(slot2Pool[0]);
-    pickedIds.add(slot2Pool[0].id);
+  } else {
+    const fallbackSlot2 = pickBestTagRelatedPost(currentPost, slot2Pool, currentMainTitle);
+    if (fallbackSlot2) {
+      result.push(fallbackSlot2);
+      pickedIds.add(fallbackSlot2.id);
+    }
   }
 
   // ── 第 3 格：相同標記（Tags）越多的文章 ──
   const slot3Pool = candidates.filter((p) => !pickedIds.has(p.id));
-  const manualTargets = currentPost.manualRecommendations || [];
-  const currentTags = new Set(
-    (currentPost.tags || []).map((t) => t.trim().toLowerCase()).filter(Boolean)
-  );
-
-  const tagScored = slot3Pool
-    .map((p) => {
-      const candidateUniqueTags = new Set(
-        (p.tags || []).map((t) => t.trim().toLowerCase()).filter(Boolean)
-      );
-      let sharedTagsCount = 0;
-      candidateUniqueTags.forEach((tag) => {
-        if (currentTags.has(tag)) sharedTagsCount += 1;
-      });
-
-      const isManual = manualTargets.some((target) => matchesManualTarget(p, target)) ? 1 : 0;
-      const titleScore = computeTitleSimilarityScore(
-        currentMainTitle,
-        extractCardTitle(p.title)
-      );
-      const sameCategory = currentPost.category && p.category === currentPost.category ? 1 : 0;
-      const timeWeight = new Date(p.date).getTime() || 0;
-      const isRelevant = sharedTagsCount > 0 || isManual > 0 || titleScore > 0;
-
-      return {
-        post: p,
-        isRelevant,
-        sharedTagsCount,
-        isManual,
-        titleScore,
-        sameCategory,
-        timeWeight,
-      };
-    })
-    .filter((item) => item.isRelevant)
-    .sort((a, b) => {
-      if (b.sharedTagsCount !== a.sharedTagsCount) {
-        return b.sharedTagsCount - a.sharedTagsCount;
-      }
-      if (b.isManual !== a.isManual) {
-        return b.isManual - a.isManual;
-      }
-      if (b.titleScore !== a.titleScore) {
-        return b.titleScore - a.titleScore;
-      }
-      if (b.sameCategory !== a.sameCategory) {
-        return b.sameCategory - a.sameCategory;
-      }
-      return b.timeWeight - a.timeWeight;
-    });
-
-  if (tagScored[0]) {
-    result.push(tagScored[0].post);
-    pickedIds.add(tagScored[0].post.id);
-  } else if (slot3Pool[0]) {
-    result.push(slot3Pool[0]);
-    pickedIds.add(slot3Pool[0].id);
+  const slot3Pick = pickBestTagRelatedPost(currentPost, slot3Pool, currentMainTitle);
+  if (slot3Pick) {
+    result.push(slot3Pick);
+    pickedIds.add(slot3Pick.id);
   }
 
   return result.slice(0, 3);
