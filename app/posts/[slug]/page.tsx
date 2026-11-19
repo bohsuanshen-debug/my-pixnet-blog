@@ -2,16 +2,45 @@ import React from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getAllPosts, getPostBySlug, getPageBlocks } from "@/lib/notion";
+import Image from "next/image";
+import { getAllPosts, getPostBySlug, getPageBlocks, type BlogPost } from "@/lib/notion";
 import NotionRenderer from "@/components/NotionRenderer";
 import AdSense from "@/components/AdSense";
 import AmbientPostLayout from "@/components/AmbientPostLayout";
 import { formatDate } from "@/lib/utils";
-import { ArrowLeft, Calendar, Film, Tag } from "lucide-react";
+import { ArrowLeft, Calendar, Film, Sparkles } from "lucide-react";
 
 // 快取 10 分鐘，減少不必要的背景 API 請求；一旦生成成功即長期穩定提供快取
 export const revalidate = 600;
 export const dynamicParams = true;
+
+function extractCardTitle(title: string): string {
+  const quoteMatch = title.match(/《([^》]+)》/);
+  return quoteMatch?.[1]?.trim() || title;
+}
+
+function getRelatedPosts(currentPost: BlogPost, allPosts: BlogPost[], limit = 3): BlogPost[] {
+  const currentTags = new Set(currentPost.tags || []);
+
+  const scored = allPosts
+    .filter((p) => p.id !== currentPost.id)
+    .map((p) => {
+      let score = 0;
+      if (currentPost.category && p.category === currentPost.category) {
+        score += 3;
+      }
+      const sharedTags = (p.tags || []).filter((t) => currentTags.has(t)).length;
+      score += sharedTags * 2;
+      const timeWeight = new Date(p.date).getTime() || 0;
+      return { post: p, score, timeWeight };
+    })
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return b.timeWeight - a.timeWeight;
+    });
+
+  return scored.slice(0, limit).map((item) => item.post);
+}
 
 // 建置期不並行預編譯文章，避免部署瞬間同時發送數十次 Notion API 請求觸發 429 限流
 export async function generateStaticParams() {
@@ -81,13 +110,15 @@ export default async function PostPage({
   }
 
   let relatedPostLinks: { slug: string; title: string }[] = [];
+  let recommendedPosts: BlogPost[] = [];
   try {
     const allPosts = await getAllPosts();
     relatedPostLinks = allPosts
       .filter((p) => p.id !== post.id)
       .map((p) => ({ slug: p.slug, title: p.title }));
+    recommendedPosts = getRelatedPosts(post, allPosts, 3);
   } catch {
-    // 延伸閱讀配對為非核心功能，失敗時靜默略過不影響主內文顯示
+    // 延伸閱讀與相關推薦為非核心功能，失敗時靜默略過不影響主內文顯示
   }
 
   const titleParts = post.title.split("｜").map((part) => part.trim()).filter(Boolean);
@@ -188,21 +219,6 @@ export default async function PostPage({
             )}
           </div>
         )}
-
-        {/* 標籤 */}
-        {post.tags && post.tags.length > 0 && (
-          <div className="mt-5 flex flex-wrap gap-2">
-            {post.tags.map((tag) => (
-              <span
-                key={tag}
-                className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
-              >
-                <Tag className="h-3 w-3 opacity-60" />
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
       </header>
 
       {/* 廣告版位 2：文章頁頂部廣告 */}
@@ -216,6 +232,81 @@ export default async function PostPage({
           allPosts={relatedPostLinks}
         />
       </main>
+
+      {/* 相關影評推薦卡片區塊 */}
+      {recommendedPosts.length > 0 && (
+        <section
+          aria-label="相關影評推薦"
+          className="my-10 rounded-2xl border border-white/60 bg-white/35 p-5 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-2xl dark:border-slate-700/50 dark:bg-slate-900/35"
+        >
+          <div className="mb-4 flex items-center justify-between gap-2">
+            <h2 className="inline-flex items-center gap-2 text-base sm:text-lg font-bold text-[#455230] dark:text-amber-300">
+              <Sparkles className="h-4 w-4 shrink-0" />
+              <span>相關影評推薦</span>
+            </h2>
+            <Link
+              href="/"
+              className="text-xs font-semibold text-slate-600 hover:text-[#455230] dark:text-slate-400 dark:hover:text-amber-300 transition-colors"
+            >
+              看全部文章 →
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {recommendedPosts.map((item) => {
+              const cardTitle = extractCardTitle(item.title);
+              return (
+                <Link
+                  key={item.id}
+                  href={`/posts/${item.slug}`}
+                  className="group flex items-stretch justify-between gap-3 rounded-xl border border-white/60 bg-white/45 p-3.5 transition-all duration-300 hover:-translate-y-0.5 hover:border-white hover:bg-white/70 hover:shadow-md dark:border-slate-700/50 dark:bg-slate-800/40 dark:hover:border-slate-500 dark:hover:bg-slate-800/70"
+                >
+                  <div className="flex flex-1 min-w-0 flex-col justify-between">
+                    <div className="min-w-0">
+                      <span className="inline-block rounded bg-[#455230]/10 px-2 py-0.5 text-[11px] font-semibold text-[#455230] dark:bg-amber-400/15 dark:text-amber-300">
+                        {item.category || "影評"}
+                      </span>
+                      <h3 className="mt-1.5 text-sm font-bold leading-snug text-slate-900 group-hover:text-[#455230] dark:text-slate-100 dark:group-hover:text-amber-300 line-clamp-2 transition-colors">
+                        {cardTitle}
+                      </h3>
+                    </div>
+
+                    <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold">
+                      {item.watchScore !== undefined && (
+                        <span className="rounded bg-[#455230] px-2 py-0.5 text-[#EBEBD8] dark:bg-amber-400/20 dark:text-amber-200">
+                          {item.watchScore}分
+                        </span>
+                      )}
+                      {item.recommendScore !== undefined && (
+                        <span className="rounded bg-[#EBEBD8] px-2 py-0.5 text-[#455230] dark:bg-emerald-950/60 dark:text-emerald-300">
+                          爆米花 {item.recommendScore}/10
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="relative h-24 w-16 shrink-0 overflow-hidden rounded-lg border border-white/70 bg-white/30 dark:border-slate-700/60 dark:bg-slate-900/40">
+                    {item.coverImage ? (
+                      <Image
+                        src={item.coverImage}
+                        alt={cardTitle}
+                        fill
+                        sizes="64px"
+                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-slate-400 dark:text-slate-600">
+                        <Film className="h-5 w-5 opacity-50" />
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* 廣告版位 4：文章底部廣告 */}
       <AdSense slotType="article-bottom" />
