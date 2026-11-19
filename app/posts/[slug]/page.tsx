@@ -20,26 +20,52 @@ function extractCardTitle(title: string): string {
 }
 
 function getRelatedPosts(currentPost: BlogPost, allPosts: BlogPost[], limit = 3): BlogPost[] {
-  const currentTags = new Set(currentPost.tags || []);
+  const currentTags = new Set((currentPost.tags || []).map((t) => t.trim().toLowerCase()));
+  const currentMainTitle = extractCardTitle(currentPost.title).toLowerCase();
 
-  const scored = allPosts
-    .filter((p) => p.id !== currentPost.id)
+  const candidates = allPosts.filter((p) => p.id !== currentPost.id);
+
+  // 1. 篩選出「真的有相關」的文章：至少有 1 個共同標籤，或同分類且標題/片名有交集
+  const trulyRelated = candidates
     .map((p) => {
-      let score = 0;
-      if (currentPost.category && p.category === currentPost.category) {
-        score += 3;
-      }
-      const sharedTags = (p.tags || []).filter((t) => currentTags.has(t)).length;
-      score += sharedTags * 2;
-      const timeWeight = new Date(p.date).getTime() || 0;
-      return { post: p, score, timeWeight };
-    })
-    .sort((a, b) => {
-      if (b.score !== a.score) return b.score - a.score;
-      return b.timeWeight - a.timeWeight;
-    });
+      const sharedTagsCount = (p.tags || []).filter((t) =>
+        currentTags.has(t.trim().toLowerCase())
+      ).length;
+      const sameCategory = Boolean(currentPost.category && p.category === currentPost.category);
+      const targetMainTitle = extractCardTitle(p.title).toLowerCase();
+      const hasTitleOverlap =
+        currentMainTitle.length >= 2 &&
+        targetMainTitle.length >= 2 &&
+        (targetMainTitle.includes(currentMainTitle) ||
+          currentMainTitle.includes(targetMainTitle));
 
-  return scored.slice(0, limit).map((item) => item.post);
+      const isTrulyRelated = sharedTagsCount > 0 || (sameCategory && hasTitleOverlap);
+      const relevanceScore =
+        sharedTagsCount * 10 + (sameCategory ? 3 : 0) + (hasTitleOverlap ? 5 : 0);
+      const timeWeight = new Date(p.date).getTime() || 0;
+
+      return { post: p, isTrulyRelated, relevanceScore, timeWeight };
+    })
+    .filter((item) => item.isTrulyRelated)
+    .sort((a, b) => {
+      if (b.relevanceScore !== a.relevanceScore) return b.relevanceScore - a.relevanceScore;
+      return b.timeWeight - a.timeWeight;
+    })
+    .slice(0, limit)
+    .map((item) => item.post);
+
+  if (trulyRelated.length >= limit) {
+    return trulyRelated;
+  }
+
+  // 2. 若真相關不足 3 篇，只用「最新文章」依日期由新到舊補齊
+  const pickedIds = new Set(trulyRelated.map((p) => p.id));
+  const latestFillers = candidates
+    .filter((p) => !pickedIds.has(p.id))
+    .sort((a, b) => (new Date(b.date).getTime() || 0) - (new Date(a.date).getTime() || 0))
+    .slice(0, limit - trulyRelated.length);
+
+  return [...trulyRelated, ...latestFillers];
 }
 
 // 建置期不並行預編譯文章，避免部署瞬間同時發送數十次 Notion API 請求觸發 429 限流
