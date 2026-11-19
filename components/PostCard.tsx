@@ -5,9 +5,15 @@ import { BlogPost } from "@/lib/notion";
 import { formatDate } from "@/lib/utils";
 import { Calendar, Film, Tag } from "lucide-react";
 
+function extractMovieTitle(title: string): string {
+  const match = title.match(/《([^》]+)》/);
+  return match?.[1]?.trim() || title;
+}
+
 export default function PostCard({ post }: { post: BlogPost }) {
   const hasRatings =
     post.watchScore !== undefined || post.recommendScore !== undefined;
+  const displayTitle = extractMovieTitle(post.title);
 
   return (
     <article className="group relative flex items-stretch justify-between gap-4 sm:gap-5 overflow-hidden rounded-2xl border border-white/50 bg-white/25 p-4 sm:p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-2xl transition-all duration-300 hover:-translate-y-1 hover:border-white hover:bg-white/40 hover:shadow-xl dark:border-slate-700/40 dark:bg-slate-900/25 dark:backdrop-blur-2xl dark:hover:border-slate-500 dark:hover:bg-slate-900/40">
@@ -27,11 +33,11 @@ export default function PostCard({ post }: { post: BlogPost }) {
             </span>
           </div>
 
-          {/* 標題 */}
+          {/* 標題（僅顯示擷取出的片名） */}
           <h2 className="mt-2 font-sans text-base sm:text-[17px] font-semibold leading-snug text-slate-900 group-hover:text-[#455230] dark:text-slate-100 dark:group-hover:text-amber-400 transition-colors line-clamp-2">
             <Link href={`/posts/${post.slug}`} className="focus:outline-none">
               <span className="absolute inset-0" aria-hidden="true" />
-              {post.title}
+              {displayTitle}
             </Link>
           </h2>
 
@@ -73,7 +79,7 @@ export default function PostCard({ post }: { post: BlogPost }) {
         {post.coverImage ? (
           <Image
             src={post.coverImage}
-            alt={post.title}
+            alt={displayTitle}
             fill
             sizes="(max-width: 640px) 80px, 100px"
             className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
