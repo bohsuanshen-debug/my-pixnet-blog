@@ -6,49 +6,12 @@ import { getAllPosts, getPostBySlug, getPageBlocks } from "@/lib/notion";
 import NotionRenderer from "@/components/NotionRenderer";
 import AdSense from "@/components/AdSense";
 import AmbientPostLayout from "@/components/AmbientPostLayout";
-import { formatDate, estimateReadingTime } from "@/lib/utils";
-import { ArrowLeft, Calendar, Clock, Film, Tag } from "lucide-react";
+import { formatDate } from "@/lib/utils";
+import { ArrowLeft, Calendar, Film, Tag } from "lucide-react";
 
 // 快取 10 分鐘，減少不必要的背景 API 請求；一旦生成成功即長期穩定提供快取
 export const revalidate = 600;
 export const dynamicParams = true;
-
-function extractMovieYear(title: string, blocks: unknown[]): string | null {
-  const titleMatch = title.match(/(?:19|20)\d{2}/);
-  if (titleMatch) return titleMatch[0];
-
-  const firstBlocks = Array.isArray(blocks) ? blocks.slice(0, 8) : [];
-  const texts: string[] = [];
-
-  const collectText = (node: unknown) => {
-    if (!node || typeof node !== "object") return;
-    const record = node as Record<string, unknown>;
-    if (typeof record.plain_text === "string") {
-      texts.push(record.plain_text);
-      return;
-    }
-    if (typeof record.text === "string") {
-      texts.push(record.text);
-      return;
-    }
-    for (const value of Object.values(record)) {
-      if (Array.isArray(value)) {
-        value.forEach(collectText);
-      } else if (value && typeof value === "object") {
-        collectText(value);
-      }
-    }
-  };
-
-  firstBlocks.forEach(collectText);
-  const introText = texts.join(" ");
-
-  const parenYearMatch = introText.match(/[（(][^）)]*?((?:19|20)\d{2})[^）)]*?[）)]/);
-  if (parenYearMatch) return parenYearMatch[1];
-
-  const generalYearMatch = introText.match(/(?:19|20)\d{2}/);
-  return generalYearMatch ? generalYearMatch[0] : null;
-}
 
 // 建置期不並行預編譯文章，避免部署瞬間同時發送數十次 Notion API 請求觸發 429 限流
 export async function generateStaticParams() {
@@ -127,8 +90,6 @@ export default async function PostPage({
     // 延伸閱讀配對為非核心功能，失敗時靜默略過不影響主內文顯示
   }
 
-  const readingTime = estimateReadingTime(blocks);
-
   const titleParts = post.title.split("｜").map((part) => part.trim()).filter(Boolean);
   const hasSeriesPrefix =
     titleParts.length >= 2 &&
@@ -138,8 +99,6 @@ export default async function PostPage({
 
   const seriesPrefix = hasSeriesPrefix ? titleParts.slice(0, -1).join(" ｜ ") : null;
   const cleanMainTitle = hasSeriesPrefix ? titleParts[titleParts.length - 1] : post.title;
-
-  const extractedYear = post.releaseYear || extractMovieYear(post.title, blocks);
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://bhmoviediary.com";
   const postUrl = `${siteUrl}/posts/${post.slug}`;
@@ -187,7 +146,7 @@ export default async function PostPage({
         </Link>
       </div>
 
-      {/* 文章標頭資訊（已移除右側海報） */}
+      {/* 文章標頭資訊 */}
       <header className="mb-8 border-b border-neutral-200/80 pb-8 dark:border-neutral-800">
         <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-600 dark:text-neutral-400 mb-4 font-medium">
           {post.category && (
@@ -196,22 +155,9 @@ export default async function PostPage({
               {post.category}
             </span>
           )}
-          {extractedYear && (
-            <>
-              <span className="font-semibold text-neutral-800 dark:text-neutral-200">
-                ({extractedYear})
-              </span>
-              <span>•</span>
-            </>
-          )}
           <span className="flex items-center gap-1">
             <Calendar className="h-3.5 w-3.5" />
             <time dateTime={post.date}>{formatDate(post.date)}</time>
-          </span>
-          <span>•</span>
-          <span className="flex items-center gap-1">
-            <Clock className="h-3.5 w-3.5" />
-            約 {readingTime} 分鐘閱讀
           </span>
         </div>
 
