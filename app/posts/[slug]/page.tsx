@@ -19,6 +19,61 @@ function extractCardTitle(title: string): string {
   return quoteMatch?.[1]?.trim() || title;
 }
 
+function normalizeTitleForMatch(rawTitle: string): string {
+  return rawTitle
+    .toLowerCase()
+    .replace(/[（(][^）)]*[）)]/g, "") // 移除 (S2)、(下) 等括號後綴以利系列比對
+    .replace(/[\s：:｜|·・\-—_!！?？,，.。]/g, "")
+    .trim();
+}
+
+function extractSeriesBase(rawTitle: string): string {
+  const withoutParens = rawTitle.replace(/[（(][^）)]*[）)]/g, "").trim();
+  const splitMatch = withoutParens.split(/[：:｜|·・\-—]/)[0]?.trim() || withoutParens;
+  return splitMatch.toLowerCase();
+}
+
+function computeTitleSimilarityScore(titleA: string, titleB: string): number {
+  const normA = normalizeTitleForMatch(titleA);
+  const normB = normalizeTitleForMatch(titleB);
+  if (!normA || !normB) return 0;
+
+  let score = 0;
+
+  // 1. 完整系列主名稱一致（例如「安眠書店」與「安眠書店(S2)」）
+  if (normA === normB) {
+    score += 50;
+  } else if (
+    (normA.length >= 2 && normB.includes(normA)) ||
+    (normB.length >= 2 && normA.includes(normB))
+  ) {
+    score += 35 + Math.min(normA.length, normB.length) * 2;
+  }
+
+  // 2. 冒號前系列前綴相同（例如「蜘蛛人：新宇宙」與「蜘蛛人：離家日」）
+  const seriesA = extractSeriesBase(titleA);
+  const seriesB = extractSeriesBase(titleB);
+  if (seriesA.length >= 2 && seriesA === seriesB) {
+    score += 25;
+  }
+
+  // 3. 連續 2 字詞組（Bigram）重疊數量越多，片名關聯度越高
+  if (normA.length >= 2 && normB.length >= 2) {
+    const bigramsA = new Set<string>();
+    for (let i = 0; i < normA.length - 1; i++) {
+      bigramsA.add(normA.slice(i, i + 2));
+    }
+    let sharedBigrams = 0;
+    for (let i = 0; i < normB.length - 1; i++) {
+      const bg = normB.slice(i, i + 2);
+      if (bigramsA.has(bg)) sharedBigrams += 1;
+    }
+    score += sharedBigrams * 4;
+  }
+
+  return score;
+}
+
 function matchesManualTarget(candidate: BlogPost, target: string): boolean {
   const cleanTarget = target.trim().toLowerCase();
   if (!cleanTarget) return false;
@@ -42,8 +97,9 @@ function matchesManualTarget(candidate: BlogPost, target: string): boolean {
 
 /**
  * 3 個推薦槽位：
- * 1. 最新相同分類的文章（1 篇）
- * 2. 相關文章（2 篇）：優先比對目前文章手動標記的欄位/標籤，不足再補關聯文章或最新文章
+ * 第 1 格：最新相同分類的文章
+ * 第 2 格：片名相關越多的文章（不足則補最新文章）
+ * 第 3 格：相同標記（Tags）越多的文章（其次手動標記、片名交集、同分類與日期；不足則補最新文章）
  */
 function getRelatedPosts(currentPost: BlogPost, allPosts: BlogPost[]): BlogPost[] {
   const candidates = allPosts
@@ -53,7 +109,7 @@ function getRelatedPosts(currentPost: BlogPost, allPosts: BlogPost[]): BlogPost[
   const pickedIds = new Set<string>();
   const result: BlogPost[] = [];
 
-  // 槽位 1：最新相同分類的文章
+  // ── 第 1 格：最新相同分類的文章 ──
   const latestSameCategory = candidates.find(
     (p) => currentPost.category && p.category === currentPost.category
   );
@@ -65,60 +121,94 @@ function getRelatedPosts(currentPost: BlogPost, allPosts: BlogPost[]): BlogPost[
     pickedIds.add(candidates[0].id);
   }
 
-  // 槽位 2 & 3：相關文章（最多 2 篇）
-  const relatedPool = candidates.filter((p) => !pickedIds.has(p.id));
+  // ── 第 2 格：片名相關越多的文章 ──
+  const currentMainTitle = extractCardTitle(currentPost.title);
+  const slot2Pool = candidates.filter((p) => !pickedIds.has(p.id));
+  const titleMatched = slot2Pool
+    .map((p) => {
+      const targetMainTitle = extractCardTitle(p.title);
+      const titleScore = computeTitleSimilarityScore(currentMainTitle, targetMainTitle);
+      const sameCategory = currentPost.category && p.category === currentPost.category ? 1 : 0;
+      const timeWeight = new Date(p.date).getTime() || 0;
+      return { post: p, titleScore, sameCategory, timeWeight };
+    })
+    .filter((item) => item.titleScore > 0)
+    .sort((a, b) => {
+      if (b.titleScore !== a.titleScore) return b.titleScore - a.titleScore;
+      if (b.sameCategory !== a.sameCategory) return b.sameCategory - a.sameCategory;
+      return b.timeWeight - a.timeWeight;
+    });
+
+  if (titleMatched[0]) {
+    result.push(titleMatched[0].post);
+    pickedIds.add(titleMatched[0].post.id);
+  } else if (slot2Pool[0]) {
+    result.push(slot2Pool[0]);
+    pickedIds.add(slot2Pool[0].id);
+  }
+
+  // ── 第 3 格：相同標記（Tags）越多的文章 ──
+  const slot3Pool = candidates.filter((p) => !pickedIds.has(p.id));
   const manualTargets = currentPost.manualRecommendations || [];
-  const currentTags = new Set((currentPost.tags || []).map((t) => t.trim().toLowerCase()));
-  const currentMainTitle = extractCardTitle(currentPost.title).toLowerCase();
+  const currentTags = new Set(
+    (currentPost.tags || []).map((t) => t.trim().toLowerCase()).filter(Boolean)
+  );
 
-  const manualMatched: BlogPost[] = [];
-  const autoRelated: BlogPost[] = [];
+  const tagScored = slot3Pool
+    .map((p) => {
+      const candidateUniqueTags = new Set(
+        (p.tags || []).map((t) => t.trim().toLowerCase()).filter(Boolean)
+      );
+      let sharedTagsCount = 0;
+      candidateUniqueTags.forEach((tag) => {
+        if (currentTags.has(tag)) sharedTagsCount += 1;
+      });
 
-  for (const p of relatedPool) {
-    const isManual = manualTargets.some((target) => matchesManualTarget(p, target));
-    if (isManual) {
-      manualMatched.push(p);
-      continue;
-    }
+      const isManual = manualTargets.some((target) => matchesManualTarget(p, target)) ? 1 : 0;
+      const titleScore = computeTitleSimilarityScore(
+        currentMainTitle,
+        extractCardTitle(p.title)
+      );
+      const sameCategory = currentPost.category && p.category === currentPost.category ? 1 : 0;
+      const timeWeight = new Date(p.date).getTime() || 0;
+      const isRelevant = sharedTagsCount > 0 || isManual > 0 || titleScore > 0;
 
-    const sharedTagsCount = (p.tags || []).filter((t) =>
-      currentTags.has(t.trim().toLowerCase())
-    ).length;
-    const sameCategory = Boolean(currentPost.category && p.category === currentPost.category);
-    const targetMainTitle = extractCardTitle(p.title).toLowerCase();
-    const hasTitleOverlap =
-      currentMainTitle.length >= 2 &&
-      targetMainTitle.length >= 2 &&
-      (targetMainTitle.includes(currentMainTitle) ||
-        currentMainTitle.includes(targetMainTitle));
-
-    if (sharedTagsCount > 0 || (sameCategory && hasTitleOverlap)) {
-      autoRelated.push(p);
-    }
-  }
-
-  const remainingSlots = Math.max(0, 3 - result.length);
-  const pickedRelated: BlogPost[] = [];
-
-  for (const p of [...manualMatched, ...autoRelated]) {
-    if (pickedRelated.length >= remainingSlots) break;
-    if (!pickedIds.has(p.id)) {
-      pickedRelated.push(p);
-      pickedIds.add(p.id);
-    }
-  }
-
-  if (pickedRelated.length < remainingSlots) {
-    for (const p of relatedPool) {
-      if (pickedRelated.length >= remainingSlots) break;
-      if (!pickedIds.has(p.id)) {
-        pickedRelated.push(p);
-        pickedIds.add(p.id);
+      return {
+        post: p,
+        isRelevant,
+        sharedTagsCount,
+        isManual,
+        titleScore,
+        sameCategory,
+        timeWeight,
+      };
+    })
+    .filter((item) => item.isRelevant)
+    .sort((a, b) => {
+      if (b.sharedTagsCount !== a.sharedTagsCount) {
+        return b.sharedTagsCount - a.sharedTagsCount;
       }
-    }
+      if (b.isManual !== a.isManual) {
+        return b.isManual - a.isManual;
+      }
+      if (b.titleScore !== a.titleScore) {
+        return b.titleScore - a.titleScore;
+      }
+      if (b.sameCategory !== a.sameCategory) {
+        return b.sameCategory - a.sameCategory;
+      }
+      return b.timeWeight - a.timeWeight;
+    });
+
+  if (tagScored[0]) {
+    result.push(tagScored[0].post);
+    pickedIds.add(tagScored[0].post.id);
+  } else if (slot3Pool[0]) {
+    result.push(slot3Pool[0]);
+    pickedIds.add(slot3Pool[0].id);
   }
 
-  return [...result, ...pickedRelated].slice(0, 3);
+  return result.slice(0, 3);
 }
 
 // 建置期不並行預編譯文章，避免部署瞬間同時發送數十次 Notion API 請求觸發 429 限流
