@@ -19,53 +19,106 @@ function extractCardTitle(title: string): string {
   return quoteMatch?.[1]?.trim() || title;
 }
 
-function getRelatedPosts(currentPost: BlogPost, allPosts: BlogPost[], limit = 3): BlogPost[] {
+function matchesManualTarget(candidate: BlogPost, target: string): boolean {
+  const cleanTarget = target.trim().toLowerCase();
+  if (!cleanTarget) return false;
+
+  const cleanId = candidate.id.replace(/-/g, "").toLowerCase();
+  const cleanSlug = candidate.slug.toLowerCase();
+  const fullTitle = candidate.title.toLowerCase();
+  const shortTitle = extractCardTitle(candidate.title).toLowerCase();
+  const hasMatchingTag = (candidate.tags || []).some(
+    (t) => t.trim().toLowerCase() === cleanTarget
+  );
+
+  return (
+    cleanId === cleanTarget.replace(/-/g, "") ||
+    cleanSlug === cleanTarget ||
+    fullTitle.includes(cleanTarget) ||
+    shortTitle.includes(cleanTarget) ||
+    hasMatchingTag
+  );
+}
+
+/**
+ * 3 個推薦槽位：
+ * 1. 最新相同分類的文章（1 篇）
+ * 2. 相關文章（2 篇）：優先比對目前文章手動標記的欄位/標籤，不足再補關聯文章或最新文章
+ */
+function getRelatedPosts(currentPost: BlogPost, allPosts: BlogPost[]): BlogPost[] {
+  const candidates = allPosts
+    .filter((p) => p.id !== currentPost.id)
+    .sort((a, b) => (new Date(b.date).getTime() || 0) - (new Date(a.date).getTime() || 0));
+
+  const pickedIds = new Set<string>();
+  const result: BlogPost[] = [];
+
+  // 槽位 1：最新相同分類的文章
+  const latestSameCategory = candidates.find(
+    (p) => currentPost.category && p.category === currentPost.category
+  );
+  if (latestSameCategory) {
+    result.push(latestSameCategory);
+    pickedIds.add(latestSameCategory.id);
+  } else if (candidates[0]) {
+    result.push(candidates[0]);
+    pickedIds.add(candidates[0].id);
+  }
+
+  // 槽位 2 & 3：相關文章（最多 2 篇）
+  const relatedPool = candidates.filter((p) => !pickedIds.has(p.id));
+  const manualTargets = currentPost.manualRecommendations || [];
   const currentTags = new Set((currentPost.tags || []).map((t) => t.trim().toLowerCase()));
   const currentMainTitle = extractCardTitle(currentPost.title).toLowerCase();
 
-  const candidates = allPosts.filter((p) => p.id !== currentPost.id);
+  const manualMatched: BlogPost[] = [];
+  const autoRelated: BlogPost[] = [];
 
-  // 1. 篩選出「真的有相關」的文章：至少有 1 個共同標籤，或同分類且標題/片名有交集
-  const trulyRelated = candidates
-    .map((p) => {
-      const sharedTagsCount = (p.tags || []).filter((t) =>
-        currentTags.has(t.trim().toLowerCase())
-      ).length;
-      const sameCategory = Boolean(currentPost.category && p.category === currentPost.category);
-      const targetMainTitle = extractCardTitle(p.title).toLowerCase();
-      const hasTitleOverlap =
-        currentMainTitle.length >= 2 &&
-        targetMainTitle.length >= 2 &&
-        (targetMainTitle.includes(currentMainTitle) ||
-          currentMainTitle.includes(targetMainTitle));
+  for (const p of relatedPool) {
+    const isManual = manualTargets.some((target) => matchesManualTarget(p, target));
+    if (isManual) {
+      manualMatched.push(p);
+      continue;
+    }
 
-      const isTrulyRelated = sharedTagsCount > 0 || (sameCategory && hasTitleOverlap);
-      const relevanceScore =
-        sharedTagsCount * 10 + (sameCategory ? 3 : 0) + (hasTitleOverlap ? 5 : 0);
-      const timeWeight = new Date(p.date).getTime() || 0;
+    const sharedTagsCount = (p.tags || []).filter((t) =>
+      currentTags.has(t.trim().toLowerCase())
+    ).length;
+    const sameCategory = Boolean(currentPost.category && p.category === currentPost.category);
+    const targetMainTitle = extractCardTitle(p.title).toLowerCase();
+    const hasTitleOverlap =
+      currentMainTitle.length >= 2 &&
+      targetMainTitle.length >= 2 &&
+      (targetMainTitle.includes(currentMainTitle) ||
+        currentMainTitle.includes(targetMainTitle));
 
-      return { post: p, isTrulyRelated, relevanceScore, timeWeight };
-    })
-    .filter((item) => item.isTrulyRelated)
-    .sort((a, b) => {
-      if (b.relevanceScore !== a.relevanceScore) return b.relevanceScore - a.relevanceScore;
-      return b.timeWeight - a.timeWeight;
-    })
-    .slice(0, limit)
-    .map((item) => item.post);
-
-  if (trulyRelated.length >= limit) {
-    return trulyRelated;
+    if (sharedTagsCount > 0 || (sameCategory && hasTitleOverlap)) {
+      autoRelated.push(p);
+    }
   }
 
-  // 2. 若真相關不足 3 篇，只用「最新文章」依日期由新到舊補齊
-  const pickedIds = new Set(trulyRelated.map((p) => p.id));
-  const latestFillers = candidates
-    .filter((p) => !pickedIds.has(p.id))
-    .sort((a, b) => (new Date(b.date).getTime() || 0) - (new Date(a.date).getTime() || 0))
-    .slice(0, limit - trulyRelated.length);
+  const remainingSlots = Math.max(0, 3 - result.length);
+  const pickedRelated: BlogPost[] = [];
 
-  return [...trulyRelated, ...latestFillers];
+  for (const p of [...manualMatched, ...autoRelated]) {
+    if (pickedRelated.length >= remainingSlots) break;
+    if (!pickedIds.has(p.id)) {
+      pickedRelated.push(p);
+      pickedIds.add(p.id);
+    }
+  }
+
+  if (pickedRelated.length < remainingSlots) {
+    for (const p of relatedPool) {
+      if (pickedRelated.length >= remainingSlots) break;
+      if (!pickedIds.has(p.id)) {
+        pickedRelated.push(p);
+        pickedIds.add(p.id);
+      }
+    }
+  }
+
+  return [...result, ...pickedRelated].slice(0, 3);
 }
 
 // 建置期不並行預編譯文章，避免部署瞬間同時發送數十次 Notion API 請求觸發 429 限流
@@ -142,7 +195,7 @@ export default async function PostPage({
     relatedPostLinks = allPosts
       .filter((p) => p.id !== post.id)
       .map((p) => ({ slug: p.slug, title: p.title }));
-    recommendedPosts = getRelatedPosts(post, allPosts, 3);
+    recommendedPosts = getRelatedPosts(post, allPosts);
   } catch {
     // 延伸閱讀與相關推薦為非核心功能，失敗時靜默略過不影響主內文顯示
   }

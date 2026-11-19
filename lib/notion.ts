@@ -17,6 +17,7 @@ export interface BlogPost {
   date: string;
   category: string;
   tags: string[];
+  manualRecommendations?: string[];
   originalUrl?: string;
   coverImage?: string;
   excerpt?: string;
@@ -94,6 +95,45 @@ function parseYearProperty(prop: any): string | undefined {
   return undefined;
 }
 
+function parseManualRecommendations(props: Record<string, any>, tags: string[]): string[] {
+  const targets: string[] = [];
+
+  const candidateKeys = ["推薦文章", "相關文章", "手動推薦", "精選推薦", "Recommended", "Related"];
+  for (const key of candidateKeys) {
+    const prop = props[key];
+    if (!prop) continue;
+
+    if (prop.type === "rich_text" && Array.isArray(prop.rich_text)) {
+      const combined = prop.rich_text.map((t: any) => t?.plain_text || "").join("");
+      combined
+        .split(/[,，、\n|]+/)
+        .map((s: string) => s.trim())
+        .filter(Boolean)
+        .forEach((item: string) => targets.push(item));
+    } else if (prop.type === "multi_select" && Array.isArray(prop.multi_select)) {
+      prop.multi_select.forEach((item: any) => {
+        if (item?.name) targets.push(String(item.name).trim());
+      });
+    } else if (prop.type === "select" && prop.select?.name) {
+      targets.push(String(prop.select.name).trim());
+    } else if (prop.type === "relation" && Array.isArray(prop.relation)) {
+      prop.relation.forEach((rel: any) => {
+        if (rel?.id) targets.push(String(rel.id).replace(/-/g, ""));
+      });
+    }
+  }
+
+  // 若 Tags 內有「推薦:xxx」或「推:xxx」格式標記也一併納入
+  for (const tag of tags) {
+    const m = tag.match(/^(?:推薦|相關|推)[:：]\s*(.+)$/);
+    if (m?.[1]) {
+      targets.push(m[1].trim());
+    }
+  }
+
+  return Array.from(new Set(targets));
+}
+
 function mapNotionPageToPost(page: any): BlogPost {
   const props = page.properties || {};
   const title =
@@ -104,6 +144,7 @@ function mapNotionPageToPost(page: any): BlogPost {
   const date = props.Date?.date?.start || page.created_time || "";
   const category = props.Category?.select?.name || "未分類";
   const tags = (props.Tags?.multi_select || []).map((t: any) => t.name);
+  const manualRecommendations = parseManualRecommendations(props, tags);
   const originalUrl = props["Original URL"]?.url || "";
 
   const watchScore =
@@ -147,6 +188,7 @@ function mapNotionPageToPost(page: any): BlogPost {
     date,
     category,
     tags,
+    manualRecommendations,
     originalUrl,
     coverImage,
     watchScore,
