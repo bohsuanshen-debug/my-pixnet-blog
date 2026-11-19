@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { getAllPosts, getPostBySlug, getPageBlocks, type BlogPost } from "@/lib/notion";
+import { getAllPosts, getPostBySlug, getPageBlocks, type BlogPost, type NotionBlock } from "@/lib/notion";
 import NotionRenderer from "@/components/NotionRenderer";
 import AdSense from "@/components/AdSense";
 import AmbientPostLayout from "@/components/AmbientPostLayout";
@@ -17,6 +17,48 @@ export const dynamicParams = true;
 function extractCardTitle(title: string): string {
   const quoteMatch = title.match(/《([^》]+)》/);
   return quoteMatch?.[1]?.trim() || title;
+}
+
+/**
+ * 從已讀取的 Notion 區塊中自動擷取前段真實文字作為 SEO description
+ * 不增加任何額外 API 請求
+ */
+function extractSeoDescriptionFromBlocks(blocks: NotionBlock[], fallbackTitle: string, maxLen = 155): string {
+  const textChunks: string[] = [];
+
+  for (const block of blocks) {
+    const richText =
+      block[block.type]?.rich_text ||
+      (block.type === "paragraph" ? block.paragraph?.rich_text : null);
+
+    if (Array.isArray(richText) && richText.length > 0) {
+      const plain = richText
+        .map((t: any) => t?.plain_text || "")
+        .join("")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      // 略過過短的小標題或純分隔線
+      if (plain.length >= 12 && !plain.startsWith("http")) {
+        textChunks.push(plain);
+      }
+    }
+
+    if (textChunks.join(" ").length >= maxLen + 40) {
+      break;
+    }
+  }
+
+  const combined = textChunks.join(" ").trim();
+  if (!combined) {
+    return `${fallbackTitle} - 由沈伯（戴爾瑞）撰寫的深度影評與觀後心得。`;
+  }
+
+  if (combined.length <= maxLen) {
+    return combined;
+  }
+
+  return `${combined.slice(0, maxLen - 1).trim()}…`;
 }
 
 function normalizeTitleForMatch(rawTitle: string): string {
@@ -226,31 +268,42 @@ export async function generateMetadata({
       return { title: "文章不存在" };
     }
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://bhmoviediary.com";
+    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://bhmoviediary.com").replace(/\/$/, "");
     const postUrl = `${siteUrl}/posts/${post.slug}`;
-    const description =
-      post.excerpt || `${post.title} - 由戴爾瑞撰寫的深度影評與觀後心得。`;
+    const pureWorkTitle = extractCardTitle(post.title);
+
+    // 沿用 React cache() 快取的 blocks，不產生重複 Notion API 呼叫
+    let dynamicDescription = post.excerpt || "";
+    if (!dynamicDescription) {
+      try {
+        const blocks = await getPageBlocks(post.id);
+        dynamicDescription = extractSeoDescriptionFromBlocks(blocks, pureWorkTitle);
+      } catch {
+        dynamicDescription = `《${pureWorkTitle}》無雷／有雷深度影評與觀後感（超主觀評分${post.watchScore !== undefined ? ` ${post.watchScore}/100` : ""}），由戴爾瑞撰寫。`;
+      }
+    }
 
     return {
       title: post.title,
-      description: description,
+      description: dynamicDescription,
+      keywords: [pureWorkTitle, `${pureWorkTitle} 影評`, `${pureWorkTitle} 心得`, ...(post.tags || []), "影視戴爾瑞"],
       alternates: {
         canonical: postUrl,
       },
       openGraph: {
         title: post.title,
-        description: description,
+        description: dynamicDescription,
         url: postUrl,
         type: "article",
         publishedTime: post.date,
         authors: ["戴爾瑞"],
         tags: post.tags,
-        images: post.coverImage ? [{ url: post.coverImage }] : [],
+        images: post.coverImage ? [{ url: post.coverImage, alt: `${pureWorkTitle} 海報封面` }] : [],
       },
       twitter: {
         card: "summary_large_image",
         title: post.title,
-        description: description,
+        description: dynamicDescription,
         images: post.coverImage ? [post.coverImage] : [],
       },
     };
@@ -298,33 +351,83 @@ export default async function PostPage({
 
   const seriesPrefix = hasSeriesPrefix ? titleParts.slice(0, -1).join(" ｜ ") : null;
   const cleanMainTitle = hasSeriesPrefix ? titleParts[titleParts.length - 1] : post.title;
+  const pureWorkTitle = extractCardTitle(post.title);
+  const seoDescription = post.excerpt || extractSeoDescriptionFromBlocks(blocks, pureWorkTitle);
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://bhmoviediary.com";
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://bhmoviediary.com").replace(/\/$/, "");
   const postUrl = `${siteUrl}/posts/${post.slug}`;
-  const jsonLd = {
+
+  const isTvSeries =
+    post.category?.includes("影集") ||
+    post.title.includes("影集說大話") ||
+    /\(S\d+/i.test(post.title);
+  const isVideoGame =
+    post.category?.includes("電玩") || post.title.includes("電玩");
+
+  const reviewedItemType = isVideoGame
+    ? "VideoGame"
+    : isTvSeries
+    ? "TVSeries"
+    : "Movie";
+
+  const jsonLd: Record<string, any> = {
     "@context": "https://schema.org",
-    "@type": "BlogPosting",
-    headline: post.title,
-    description: post.excerpt || post.title,
-    datePublished: post.date,
-    dateModified: post.date,
-    mainEntityOfPage: {
-      "@type": "WebPage",
-      "@id": postUrl,
-    },
-    author: {
-      "@type": "Person",
-      name: "戴爾瑞",
-    },
-    publisher: {
-      "@type": "Organization",
-      name: "影視戴爾瑞",
-      logo: {
-        "@type": "ImageObject",
-        url: `${siteUrl}/favicon.ico`,
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "@id": `${postUrl}#article`,
+        headline: post.title,
+        description: seoDescription,
+        datePublished: post.date,
+        dateModified: post.date,
+        inLanguage: "zh-TW",
+        mainEntityOfPage: {
+          "@type": "WebPage",
+          "@id": postUrl,
+        },
+        author: {
+          "@type": "Person",
+          name: "戴爾瑞",
+        },
+        publisher: {
+          "@type": "Organization",
+          name: "影視戴爾瑞",
+          logo: {
+            "@type": "ImageObject",
+            url: `${siteUrl}/logo.jpg`,
+          },
+        },
+        image: post.coverImage || undefined,
       },
-    },
-    image: post.coverImage || undefined,
+      {
+        "@type": "Review",
+        "@id": `${postUrl}#review`,
+        name: post.title,
+        reviewBody: seoDescription,
+        datePublished: post.date,
+        inLanguage: "zh-TW",
+        author: {
+          "@type": "Person",
+          name: "戴爾瑞",
+        },
+        itemReviewed: {
+          "@type": reviewedItemType,
+          name: pureWorkTitle,
+          ...(post.releaseYear ? { dateCreated: post.releaseYear } : {}),
+          ...(post.coverImage ? { image: post.coverImage } : {}),
+        },
+        ...(post.watchScore !== undefined
+          ? {
+              reviewRating: {
+                "@type": "Rating",
+                ratingValue: post.watchScore,
+                bestRating: 100,
+                worstRating: 0,
+              },
+            }
+          : {}),
+      },
+    ],
   };
 
   return (
@@ -457,7 +560,7 @@ export default async function PostPage({
                     {item.coverImage ? (
                       <Image
                         src={item.coverImage}
-                        alt={cardTitle}
+                        alt={`${cardTitle} 海報封面`}
                         fill
                         sizes="64px"
                         className="object-cover transition-transform duration-500 group-hover:scale-105"
