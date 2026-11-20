@@ -63,12 +63,12 @@ export default function PostCard({ post }: { post: BlogPost }) {
           )}
         </div>
 
-        {/* 放大的雙指標：與右側封面照底部貼齊 */}
+        {/* 放大的雙指標：超主觀評分僅顯示數字，與右側封面照底部貼齊 */}
         {hasRatings && (
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {post.watchScore !== undefined && (
               <span className="inline-flex items-center rounded-lg border border-[#455230]/25 bg-[#455230] px-3 py-1 text-xs sm:text-[13px] font-semibold text-[#EBEBD8] shadow-xs dark:border-amber-400/30 dark:bg-amber-400/15 dark:text-amber-200">
-                超主觀評分 {post.watchScore}/100
+                超主觀評分 {post.watchScore}
               </span>
             )}
             {post.recommendScore !== undefined && (

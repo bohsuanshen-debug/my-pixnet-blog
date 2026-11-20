@@ -54,7 +54,7 @@ function HeroMain({ post }: { post: BlogPost }) {
             <div className="inline-flex flex-wrap items-center gap-1.5">
               {post.watchScore !== undefined && (
                 <span className="inline-flex items-center rounded-md border border-amber-400/40 bg-black/55 px-2 py-0.5 text-xs font-medium text-amber-300 backdrop-blur-sm">
-                  超主觀評分 {post.watchScore}/100
+                  超主觀評分 {post.watchScore}
                 </span>
               )}
               {post.recommendScore !== undefined && (
@@ -74,20 +74,6 @@ function HeroMain({ post }: { post: BlogPost }) {
         <h2 className="font-serif text-xl sm:text-2xl md:text-3xl font-bold leading-snug text-white group-hover:text-amber-100 transition-colors line-clamp-2">
           {post.title}
         </h2>
-
-        {/* 標籤 */}
-        {post.tags && post.tags.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {post.tags.slice(0, 3).map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full bg-white/10 backdrop-blur-sm px-2.5 py-0.5 text-[11px] text-white/80"
-              >
-                #{tag}
-              </span>
-            ))}
-          </div>
-        )}
       </div>
     </Link>
   );
@@ -135,12 +121,11 @@ function HeroSecondary({ post }: { post: BlogPost }) {
             <time dateTime={post.date}>{formatDate(post.date)}</time>
           </span>
 
-          {/* 自動顯示超主觀評分(100分制)與爆米花指數(10分制) */}
           {hasRatings && (
             <div className="inline-flex flex-wrap items-center gap-1">
               {post.watchScore !== undefined && (
                 <span className="inline-flex items-center rounded border border-amber-400/40 bg-black/55 px-1.5 py-0.5 text-[11px] font-medium text-amber-300 backdrop-blur-sm">
-                  超主觀評分 {post.watchScore}/100
+                  超主觀評分 {post.watchScore}
                 </span>
               )}
               {post.recommendScore !== undefined && (
