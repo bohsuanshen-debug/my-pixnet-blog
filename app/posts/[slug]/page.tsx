@@ -16,8 +16,30 @@ export const revalidate = 600;
 export const dynamicParams = true;
 
 function extractCardTitle(title: string): string {
-  const quoteMatch = title.match(/《([^》]+)》/);
+  const quoteMatch = title.match(/《([^》]+)》(.*)$/);
   return quoteMatch?.[1]?.trim() || title;
+}
+
+/**
+ * 打造專屬社群分享標題格式：
+ * 移除「影視戴爾瑞」與「超主觀評分」，保留《片名》+ 自訂副標題，爆米花指數接在最後
+ * 例如：《異星入境》打破你的既定印象?! (爆米花指數 8.5/10)
+ */
+function formatSocialShareTitle(title: string, recommendScore?: number): string {
+  const quoteMatch = title.match(/《([^》]+)》(.*)$/);
+  let main = title;
+  let sub = "";
+
+  if (quoteMatch) {
+    main = quoteMatch[1].trim();
+    sub = quoteMatch[2].trim();
+  } else {
+    const parts = title.split(/[｜|]/);
+    main = parts[parts.length - 1].trim();
+  }
+
+  const base = sub ? `《${main}》${sub}` : (main.startsWith("《") ? main : `《${main}》`);
+  return typeof recommendScore === "number" ? `${base} (爆米花指數 ${recommendScore}/10)` : base;
 }
 
 /**
@@ -284,17 +306,7 @@ export async function generateMetadata({
       }
     }
 
-    // 將評分特色前置或帶入社群卡片描述，社群分享時第一眼就能看到「超主觀評分」與「爆米花指數」
-    const ratingsSummary = [
-      post.watchScore !== undefined ? `超主觀評分 ${post.watchScore}/100` : null,
-      post.recommendScore !== undefined ? `爆米花指數 ${post.recommendScore}/10` : null,
-    ]
-      .filter(Boolean)
-      .join(" ｜ ");
-
-    const socialDescription = ratingsSummary
-      ? `【${ratingsSummary}】${dynamicDescription}`
-      : dynamicDescription;
+    const socialShareTitle = formatSocialShareTitle(post.title, post.recommendScore);
 
     return {
       title: post.title,
@@ -304,8 +316,8 @@ export async function generateMetadata({
         canonical: postUrl,
       },
       openGraph: {
-        title: ratingsSummary ? `《${pureWorkTitle}》${ratingsSummary} ｜ 影視戴爾瑞` : post.title,
-        description: socialDescription,
+        title: socialShareTitle,
+        description: dynamicDescription,
         url: postUrl,
         type: "article",
         publishedTime: post.date,
@@ -315,8 +327,8 @@ export async function generateMetadata({
       },
       twitter: {
         card: "summary_large_image",
-        title: ratingsSummary ? `《${pureWorkTitle}》${ratingsSummary} ｜ 影視戴爾瑞` : post.title,
-        description: socialDescription,
+        title: socialShareTitle,
+        description: dynamicDescription,
         images: post.coverImage ? [post.coverImage] : [],
       },
     };
@@ -522,7 +534,6 @@ export default async function PostPage({
         title={post.title}
         pureTitle={pureWorkTitle}
         url={postUrl}
-        watchScore={post.watchScore}
         recommendScore={post.recommendScore}
         excerpt={seoDescription}
       />

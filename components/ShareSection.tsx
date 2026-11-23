@@ -7,7 +7,6 @@ interface ShareSectionProps {
   title: string;
   pureTitle: string;
   url: string;
-  watchScore?: number;
   recommendScore?: number;
   excerpt?: string;
 }
@@ -16,23 +15,23 @@ export default function ShareSection({
   title,
   pureTitle,
   url,
-  watchScore,
   recommendScore,
   excerpt,
 }: ShareSectionProps) {
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedQuote, setCopiedQuote] = useState(false);
 
-  // 打造有片名、雙評分特色的推坑金句文案
-  const ratingsText = [
-    watchScore !== undefined ? `超主觀評分：${watchScore}/100` : null,
-    recommendScore !== undefined ? `爆米花指數：${recommendScore}/10` : null,
-  ]
-    .filter(Boolean)
-    .join(" ｜ ");
+  // 解析自訂副標題
+  const quoteMatch = title.match(/《([^》]+)》(.*)$/);
+  const subtitle = quoteMatch ? quoteMatch[2].trim() : "";
+  const baseTitle = subtitle ? `《${pureTitle}》${subtitle}` : `《${pureTitle}》`;
+  const shareTitleWithScore =
+    typeof recommendScore === "number"
+      ? `${baseTitle} (爆米花指數 ${recommendScore}/10)`
+      : baseTitle;
 
-  const shareText = `【影評分享】《${pureTitle}》\n${ratingsText ? `${ratingsText}\n` : ""}${
-    excerpt ? `「${excerpt.slice(0, 70)}...」\n` : ""
+  const shareText = `【影評分享】${shareTitleWithScore}\n${
+    excerpt ? `「${excerpt.slice(0, 75)}...」\n` : ""
   }閱讀全文：${url}`;
 
   // 1. 原生手機分享面板 (Web Share API)
@@ -40,8 +39,8 @@ export default function ShareSection({
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
         await navigator.share({
-          title: `《${pureTitle}》- 影視戴爾瑞`,
-          text: ratingsText ? `《${pureTitle}》${ratingsText}` : title,
+          title: shareTitleWithScore,
+          text: shareTitleWithScore,
           url,
         });
         return;
@@ -74,9 +73,7 @@ export default function ShareSection({
   const shareToLine = () => {
     const lineUrl = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(
       url
-    )}&text=${encodeURIComponent(
-      `【影視戴爾瑞】《${pureTitle}》${ratingsText ? ` (${ratingsText})` : ""}`
-    )}`;
+    )}&text=${encodeURIComponent(shareTitleWithScore)}`;
     window.open(lineUrl, "_blank", "noopener,noreferrer,width=600,height=500");
   };
 
@@ -86,7 +83,7 @@ export default function ShareSection({
   };
 
   const shareToThreadsOrX = () => {
-    const tweetText = `《${pureTitle}》深度影評心得分享 ${ratingsText ? `[${ratingsText}]` : ""}`;
+    const tweetText = `${shareTitleWithScore} 深度影評心得`;
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
       tweetText
     )}&url=${encodeURIComponent(url)}`;
@@ -105,7 +102,7 @@ export default function ShareSection({
             <span>喜歡這篇心得？分享給好友</span>
           </h3>
           <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">
-            低摩擦分享至 LINE、社群或聊天室，自帶片名與評分資訊
+            低摩擦分享至 LINE、社群或聊天室，自帶片名與爆米花評分
           </p>
         </div>
 
@@ -173,7 +170,7 @@ export default function ShareSection({
         <button
           type="button"
           onClick={handleCopyQuote}
-          title="複製包含片名、評分與連結的完整文案"
+          title="複製包含片名、副標題、爆米花指數與連結的完整文案"
           className="inline-flex items-center gap-1.5 rounded-lg border border-[#637545]/30 bg-[#EBEBD8]/90 px-3 py-1.5 text-xs font-semibold text-[#455230] hover:bg-[#EBEBD8] shadow-xs transition-all active:scale-95"
         >
           {copiedQuote ? (
