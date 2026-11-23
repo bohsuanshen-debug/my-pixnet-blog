@@ -53,12 +53,12 @@ function HeroMain({ post }: { post: BlogPost }) {
           {hasRatings && (
             <div className="inline-flex flex-wrap items-center gap-1.5">
               {post.watchScore !== undefined && (
-                <span className="inline-flex items-center rounded-md border border-amber-400/40 bg-black/55 px-2 py-0.5 text-xs font-medium text-amber-300 backdrop-blur-sm">
+                <span className="inline-flex items-center rounded-lg border border-[#455230]/25 bg-[#455230] px-2.5 py-1 text-xs font-semibold text-[#EBEBD8] shadow-xs backdrop-blur-sm">
                   超主觀評分 {post.watchScore}
                 </span>
               )}
               {post.recommendScore !== undefined && (
-                <span className="inline-flex items-center rounded-md border border-emerald-400/40 bg-black/55 px-2 py-0.5 text-xs font-medium text-emerald-300 backdrop-blur-sm">
+                <span className="inline-flex items-center rounded-lg border border-[#637545]/35 bg-[#EBEBD8]/90 px-2.5 py-1 text-xs font-semibold text-[#455230] shadow-xs backdrop-blur-sm">
                   爆米花指數 {post.recommendScore}/10
                 </span>
               )}
@@ -122,14 +122,14 @@ function HeroSecondary({ post }: { post: BlogPost }) {
           </span>
 
           {hasRatings && (
-            <div className="inline-flex flex-wrap items-center gap-1">
+            <div className="inline-flex flex-wrap items-center gap-1.5">
               {post.watchScore !== undefined && (
-                <span className="inline-flex items-center rounded border border-amber-400/40 bg-black/55 px-1.5 py-0.5 text-[11px] font-medium text-amber-300 backdrop-blur-sm">
+                <span className="inline-flex items-center rounded border border-[#455230]/25 bg-[#455230] px-2 py-0.5 text-[11px] font-semibold text-[#EBEBD8] shadow-xs backdrop-blur-sm">
                   超主觀評分 {post.watchScore}
                 </span>
               )}
               {post.recommendScore !== undefined && (
-                <span className="inline-flex items-center rounded border border-emerald-400/40 bg-black/55 px-1.5 py-0.5 text-[11px] font-medium text-emerald-300 backdrop-blur-sm">
+                <span className="inline-flex items-center rounded border border-[#637545]/35 bg-[#EBEBD8]/90 px-2 py-0.5 text-[11px] font-semibold text-[#455230] shadow-xs backdrop-blur-sm">
                   爆米花指數 {post.recommendScore}/10
                 </span>
               )}
