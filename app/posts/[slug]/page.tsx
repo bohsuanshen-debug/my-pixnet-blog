@@ -7,6 +7,7 @@ import { getAllPosts, getPostBySlug, getPageBlocks, type BlogPost, type NotionBl
 import NotionRenderer from "@/components/NotionRenderer";
 import AdSense from "@/components/AdSense";
 import AmbientPostLayout from "@/components/AmbientPostLayout";
+import ShareSection from "@/components/ShareSection";
 import { formatDate } from "@/lib/utils";
 import { ArrowLeft, Calendar, Film, Sparkles } from "lucide-react";
 
@@ -279,9 +280,21 @@ export async function generateMetadata({
         const blocks = await getPageBlocks(post.id);
         dynamicDescription = extractSeoDescriptionFromBlocks(blocks, pureWorkTitle);
       } catch {
-        dynamicDescription = `《${pureWorkTitle}》無雷／有雷深度影評與觀後感（超主觀評分${post.watchScore !== undefined ? ` ${post.watchScore}/100` : ""}），由戴爾瑞撰寫。`;
+        dynamicDescription = `《${pureWorkTitle}》無雷／有雷深度影評與觀後感，由戴爾瑞撰寫。`;
       }
     }
+
+    // 將評分特色前置或帶入社群卡片描述，社群分享時第一眼就能看到「超主觀評分」與「爆米花指數」
+    const ratingsSummary = [
+      post.watchScore !== undefined ? `超主觀評分 ${post.watchScore}/100` : null,
+      post.recommendScore !== undefined ? `爆米花指數 ${post.recommendScore}/10` : null,
+    ]
+      .filter(Boolean)
+      .join(" ｜ ");
+
+    const socialDescription = ratingsSummary
+      ? `【${ratingsSummary}】${dynamicDescription}`
+      : dynamicDescription;
 
     return {
       title: post.title,
@@ -291,8 +304,8 @@ export async function generateMetadata({
         canonical: postUrl,
       },
       openGraph: {
-        title: post.title,
-        description: dynamicDescription,
+        title: ratingsSummary ? `《${pureWorkTitle}》${ratingsSummary} ｜ 影視戴爾瑞` : post.title,
+        description: socialDescription,
         url: postUrl,
         type: "article",
         publishedTime: post.date,
@@ -302,8 +315,8 @@ export async function generateMetadata({
       },
       twitter: {
         card: "summary_large_image",
-        title: post.title,
-        description: dynamicDescription,
+        title: ratingsSummary ? `《${pureWorkTitle}》${ratingsSummary} ｜ 影視戴爾瑞` : post.title,
+        description: socialDescription,
         images: post.coverImage ? [post.coverImage] : [],
       },
     };
@@ -503,6 +516,16 @@ export default async function PostPage({
           allPosts={relatedPostLinks}
         />
       </main>
+
+      {/* 社群快捷分享與推坑卡片模組 */}
+      <ShareSection
+        title={post.title}
+        pureTitle={pureWorkTitle}
+        url={postUrl}
+        watchScore={post.watchScore}
+        recommendScore={post.recommendScore}
+        excerpt={seoDescription}
+      />
 
       {/* 相關影評推薦卡片區塊 */}
       {recommendedPosts.length > 0 && (
