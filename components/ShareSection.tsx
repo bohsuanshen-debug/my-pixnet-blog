@@ -20,6 +20,14 @@ export default function ShareSection({
 }: ShareSectionProps) {
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedQuote, setCopiedQuote] = useState(false);
+  const [currentUrl, setCurrentUrl] = useState(url);
+
+  // 在 Client 端確保使用當前瀏覽器視窗的真實網址（若有 window.location 優先採用）
+  React.useEffect(() => {
+    if (typeof window !== "undefined" && window.location.href) {
+      setCurrentUrl(window.location.href);
+    }
+  }, []);
 
   // 解析自訂副標題
   const quoteMatch = title.match(/《([^》]+)》(.*)$/);
@@ -32,7 +40,7 @@ export default function ShareSection({
 
   const shareText = `【影評分享】${shareTitleWithScore}\n${
     excerpt ? `「${excerpt.slice(0, 75)}...」\n` : ""
-  }閱讀全文：${url}`;
+  }閱讀全文：${currentUrl}`;
 
   // 1. 原生手機分享面板 (Web Share API)
   const handleNativeShare = async () => {
@@ -41,7 +49,7 @@ export default function ShareSection({
         await navigator.share({
           title: shareTitleWithScore,
           text: shareTitleWithScore,
-          url,
+          url: currentUrl,
         });
         return;
       } catch (err: any) {
@@ -53,8 +61,9 @@ export default function ShareSection({
 
   // 2. 一鍵複製連結
   const handleCopyLink = () => {
+    const targetUrl = typeof window !== "undefined" ? window.location.href : currentUrl;
     if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(url);
+      navigator.clipboard.writeText(targetUrl);
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 2200);
     }
@@ -62,8 +71,13 @@ export default function ShareSection({
 
   // 3. 一鍵複製推坑金句卡文案
   const handleCopyQuote = () => {
+    const targetUrl = typeof window !== "undefined" ? window.location.href : currentUrl;
+    const dynamicShareText = `【影評分享】${shareTitleWithScore}\n${
+      excerpt ? `「${excerpt.slice(0, 75)}...」\n` : ""
+    }閱讀全文：${targetUrl}`;
+
     if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(shareText);
+      navigator.clipboard.writeText(dynamicShareText);
       setCopiedQuote(true);
       setTimeout(() => setCopiedQuote(false), 2200);
     }
@@ -71,22 +85,25 @@ export default function ShareSection({
 
   // 社群快速分享跳轉
   const shareToLine = () => {
+    const targetUrl = typeof window !== "undefined" ? window.location.href : currentUrl;
     const lineUrl = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(
-      url
+      targetUrl
     )}&text=${encodeURIComponent(shareTitleWithScore)}`;
     window.open(lineUrl, "_blank", "noopener,noreferrer,width=600,height=500");
   };
 
   const shareToFacebook = () => {
-    const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+    const targetUrl = typeof window !== "undefined" ? window.location.href : currentUrl;
+    const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(targetUrl)}`;
     window.open(fbUrl, "_blank", "noopener,noreferrer,width=600,height=500");
   };
 
   const shareToThreadsOrX = () => {
+    const targetUrl = typeof window !== "undefined" ? window.location.href : currentUrl;
     const tweetText = `${shareTitleWithScore} 深度影評心得`;
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
       tweetText
-    )}&url=${encodeURIComponent(url)}`;
+    )}&url=${encodeURIComponent(targetUrl)}`;
     window.open(twitterUrl, "_blank", "noopener,noreferrer,width=600,height=500");
   };
 
