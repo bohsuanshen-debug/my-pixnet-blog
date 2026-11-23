@@ -2,6 +2,7 @@ import React, { Suspense } from "react";
 import { getAllPosts } from "@/lib/notion";
 import FeaturedHero from "@/components/FeaturedHero";
 import PostFilterSection from "@/components/PostFilterSection";
+import HomeShareSection from "@/components/HomeShareSection";
 
 // Vercel ISR: 每 600 秒在背景增量重新驗證一次，配合快取保護機制極速響應
 export const revalidate = 600;
@@ -41,6 +42,9 @@ export default async function HomePage() {
             >
               <PostFilterSection posts={posts} />
             </Suspense>
+
+            {/* ③ 首頁底部推薦與分享模組 */}
+            <HomeShareSection />
           </div>
         )}
       </div>
