@@ -231,7 +231,16 @@ export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
       const posts = allPages
         .filter((page: any) => page.properties && page.object === "page")
         .map(mapNotionPageToPost)
-        .filter((post) => post.title.trim() !== ""); // 自動排除 Notion 中的空白草稿列
+        .filter((post) => {
+          const t = post.title.trim();
+          // 排除空白、預設「無標題」草稿或「Untitled」暫存頁面
+          return (
+            t !== "" &&
+            t !== "無標題" &&
+            t !== "Untitled" &&
+            t !== "untitled"
+          );
+        });
 
       // 本地端依日期由新到舊排序（比讓 Notion 資料庫端排序更快、且不會漏掉無日期文章）
       posts.sort((a, b) => {
