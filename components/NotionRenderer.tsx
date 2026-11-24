@@ -162,77 +162,6 @@ export function RenderRichText(props: RenderRichTextProps) {
   );
 }
 
-/**
- * 若標題包含《片名》且後方還有副標／原文或年份，自動在《片名》後換行，避免零碎折行
- */
-function renderHeadingContent(richText?: NotionRichText[]): React.ReactNode {
-  if (!richText || richText.length === 0) return null;
-
-  const plainText = richText.map((item) => item.text?.content || "").join("");
-  const match = plainText.match(/^(.*《[^》]+》)\s*(.+)$/);
-
-  if (!match) {
-    return <RenderRichText richText={richText} />;
-  }
-
-  const headTarget = match[1].trim();
-  const tailTarget = match[2].trim();
-
-  if (!tailTarget) {
-    return <RenderRichText richText={richText} />;
-  }
-
-  const headRichText: NotionRichText[] = [];
-  const tailRichText: NotionRichText[] = [];
-  let cursor = 0;
-
-  for (const item of richText) {
-    const seg = item.text?.content || "";
-    const segStart = cursor;
-    const segEnd = cursor + seg.length;
-    cursor = segEnd;
-
-    const splitPoint = headTarget.length;
-    if (segEnd <= splitPoint) {
-      headRichText.push(item);
-    } else if (segStart >= splitPoint) {
-      tailRichText.push(item);
-    } else {
-      const localSplit = Math.max(0, splitPoint - segStart);
-      const firstPart = seg.slice(0, localSplit);
-      const secondPart = seg.slice(localSplit).trimStart();
-
-      if (firstPart) {
-        headRichText.push({
-          ...item,
-          text: { ...item.text, content: firstPart },
-        });
-      }
-      if (secondPart) {
-        tailRichText.push({
-          ...item,
-          text: { ...item.text, content: secondPart },
-        });
-      }
-    }
-  }
-
-  if (headRichText.length === 0 || tailRichText.length === 0) {
-    return <RenderRichText richText={richText} />;
-  }
-
-  return (
-    <>
-      <span className="block">
-        <RenderRichText richText={headRichText} />
-      </span>
-      <span className="mt-1 block text-[0.82em] font-semibold text-slate-700 dark:text-slate-300">
-        <RenderRichText richText={tailRichText} />
-      </span>
-    </>
-  );
-}
-
 function findMatchedRelatedPost(
   plainText: string,
   allPosts?: RelatedPostLink[]
@@ -320,17 +249,17 @@ function ImageBlock({ block }: { block: any }) {
   if (!src) return null;
 
   return (
-    <figure className="my-8 flex flex-col items-center">
-      <div className="relative max-w-full overflow-hidden rounded-2xl border border-white/60 bg-white/40 p-1.5 sm:p-2 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
+    <figure className="my-6 flex flex-col items-center">
+      <div className="relative max-w-full overflow-hidden rounded-2xl border border-white/60 bg-white/40 p-1.5 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
         <img
           src={src}
           alt={caption || "文章插圖"}
           loading="lazy"
-          className="max-h-[540px] w-auto max-w-full rounded-xl object-contain mx-auto transition-transform duration-300 hover:scale-[1.008]"
+          className="max-h-[380px] sm:max-h-[420px] w-auto max-w-full rounded-xl object-contain mx-auto transition-transform duration-300 hover:scale-[1.008]"
         />
       </div>
       {caption && (
-        <figcaption className="mt-2.5 text-center text-xs text-slate-500 dark:text-slate-400">
+        <figcaption className="mt-2 text-center text-xs text-slate-500 dark:text-slate-400">
           {caption}
         </figcaption>
       )}
@@ -364,8 +293,8 @@ export default function NotionRenderer({
     const ListTag = listBuffer.type === "bulleted_list_item" ? "ul" : "ol";
     const listClass =
       listBuffer.type === "bulleted_list_item"
-        ? "list-disc list-outside pl-6 my-4 space-y-1.5 text-slate-700 dark:text-slate-300 leading-relaxed"
-        : "list-decimal list-outside pl-6 my-4 space-y-1.5 text-slate-700 dark:text-slate-300 leading-relaxed";
+        ? "list-disc list-outside pl-6 my-4 space-y-1.5 text-[18px] text-slate-700 dark:text-slate-300 leading-[1.88]"
+        : "list-decimal list-outside pl-6 my-4 space-y-1.5 text-[18px] text-slate-700 dark:text-slate-300 leading-[1.88]";
 
     renderedElements.push(
       <ListTag key={`list-${renderedElements.length}`} className={listClass}>
@@ -419,7 +348,7 @@ export default function NotionRenderer({
           const matchedPost = findMatchedRelatedPost(plainText, allPosts);
           if (matchedPost) {
             renderedElements.push(
-              <p key={block.id} className="my-3 whitespace-pre-line">
+              <p key={block.id} className="my-3 whitespace-pre-line text-[18px]">
                 <Link
                   href={`/posts/${matchedPost.slug}`}
                   className="inline-flex items-center gap-1 font-medium text-amber-700 underline decoration-amber-400/70 underline-offset-4 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 transition-colors"
@@ -436,7 +365,7 @@ export default function NotionRenderer({
         renderedElements.push(
           <p
             key={block.id}
-            className="my-5 whitespace-pre-line text-[17px] leading-[1.85] text-slate-700 dark:text-slate-300"
+            className="my-5 whitespace-pre-line text-[18px] leading-[1.88] text-slate-700 dark:text-slate-300"
           >
             <RenderRichText richText={richText} />
           </p>
@@ -452,9 +381,9 @@ export default function NotionRenderer({
           <h2
             key={block.id}
             id={encodeURIComponent(text)}
-            className="mt-12 mb-5 font-serif text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-2"
+            className="mt-11 mb-4 font-serif text-xl sm:text-2xl md:text-[26px] font-bold tracking-tight text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-2 break-words"
           >
-            {renderHeadingContent(richText)}
+            <RenderRichText richText={richText} />
           </h2>
         );
         break;
@@ -467,9 +396,9 @@ export default function NotionRenderer({
           <h3
             key={block.id}
             id={encodeURIComponent(text)}
-            className="mt-8 mb-4 font-serif text-xl md:text-2xl font-semibold tracking-tight text-slate-800 dark:text-slate-200"
+            className="mt-8 mb-3.5 font-serif text-lg sm:text-xl md:text-2xl font-semibold tracking-tight text-slate-800 dark:text-slate-200 break-words"
           >
-            {renderHeadingContent(richText)}
+            <RenderRichText richText={richText} />
           </h3>
         );
         break;
@@ -479,7 +408,7 @@ export default function NotionRenderer({
         renderedElements.push(
           <blockquote
             key={block.id}
-            className="my-6 whitespace-pre-line border-l-4 border-amber-500 bg-amber-50/40 p-4 rounded-r-xl italic text-slate-700 dark:bg-amber-950/20 dark:border-amber-400 dark:text-slate-300 font-serif"
+            className="my-6 whitespace-pre-line border-l-4 border-amber-500 bg-amber-50/40 p-4 rounded-r-xl italic text-[18px] text-slate-700 dark:bg-amber-950/20 dark:border-amber-400 dark:text-slate-300 font-serif"
           >
             <RenderRichText richText={block.quote?.rich_text} />
           </blockquote>
@@ -512,7 +441,7 @@ export default function NotionRenderer({
         renderedElements.push(
           <div
             key={block.id}
-            className="my-6 flex gap-3.5 rounded-2xl border border-white/60 bg-white/45 p-4 text-slate-800 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
+            className="my-6 flex gap-3.5 rounded-2xl border border-white/60 bg-white/45 p-4 text-[17px] text-slate-800 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
           >
             <span className="text-xl select-none">{icon}</span>
             <div className="flex-1 whitespace-pre-line leading-relaxed">
