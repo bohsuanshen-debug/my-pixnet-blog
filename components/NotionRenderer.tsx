@@ -162,6 +162,17 @@ export function RenderRichText(props: RenderRichTextProps) {
   );
 }
 
+/**
+ * 判斷是否為《作品名》(English Title, 2021) 這類置中作品資訊標題行
+ */
+function isCenteredWorkCaptionLine(plainText: string): boolean {
+  const trimmed = plainText.trim();
+  if (!trimmed.startsWith("《") || !trimmed.includes("》")) return false;
+  if (trimmed.length > 90) return false;
+  if (/[。！？!?]/.test(trimmed)) return false;
+  return true;
+}
+
 function findMatchedRelatedPost(
   plainText: string,
   allPosts?: RelatedPostLink[]
@@ -235,6 +246,9 @@ function CodeBlock({ block }: { block: any }) {
   );
 }
 
+/**
+ * 全站插圖統一寬度、左右兩邊對齊且置中（高度依圖片比例自然延伸）
+ */
 function ImageBlock({ block }: { block: any }) {
   const image = block.image;
   let src = "";
@@ -250,12 +264,12 @@ function ImageBlock({ block }: { block: any }) {
 
   return (
     <figure className="my-6 flex flex-col items-center">
-      <div className="relative max-w-full overflow-hidden rounded-2xl border border-white/60 bg-white/40 p-1.5 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
+      <div className="mx-auto w-full max-w-[330px] sm:max-w-[370px] overflow-hidden rounded-2xl border border-white/60 bg-white/40 p-1.5 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
         <img
           src={src}
           alt={caption || "文章插圖"}
           loading="lazy"
-          className="max-h-[380px] sm:max-h-[420px] w-auto max-w-full rounded-xl object-contain mx-auto transition-transform duration-300 hover:scale-[1.008]"
+          className="w-full h-auto rounded-xl object-contain transition-transform duration-300 hover:scale-[1.008]"
         />
       </div>
       {caption && (
@@ -362,6 +376,19 @@ export default function NotionRenderer({
           }
         }
 
+        // 若為海報下方《作品名》(English Title, Year) 小標，置中顯示
+        if (isCenteredWorkCaptionLine(plainText)) {
+          renderedElements.push(
+            <p
+              key={block.id}
+              className="mt-3 mb-7 text-center font-serif text-base sm:text-lg font-bold tracking-tight text-slate-800 dark:text-slate-200"
+            >
+              <RenderRichText richText={richText} />
+            </p>
+          );
+          break;
+        }
+
         renderedElements.push(
           <p
             key={block.id}
@@ -376,12 +403,16 @@ export default function NotionRenderer({
       case "heading_1":
       case "heading_2": {
         const richText = block[type]?.rich_text;
-        const text = richText?.[0]?.plain_text || "";
+        const text = richText?.map((r: NotionRichText) => r.text?.content || "").join("") || "";
+        const isCenteredTitle = isCenteredWorkCaptionLine(text);
+
         renderedElements.push(
           <h2
             key={block.id}
             id={encodeURIComponent(text)}
-            className="mt-11 mb-4 font-serif text-xl sm:text-2xl md:text-[26px] font-bold tracking-tight text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-2 break-words"
+            className={`mt-11 mb-4 font-serif text-xl sm:text-2xl md:text-[26px] font-bold tracking-tight text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-2 break-words ${
+              isCenteredTitle ? "text-center" : ""
+            }`}
           >
             <RenderRichText richText={richText} />
           </h2>
@@ -391,12 +422,16 @@ export default function NotionRenderer({
 
       case "heading_3": {
         const richText = block.heading_3?.rich_text;
-        const text = richText?.[0]?.plain_text || "";
+        const text = richText?.map((r: NotionRichText) => r.text?.content || "").join("") || "";
+        const isCenteredTitle = isCenteredWorkCaptionLine(text);
+
         renderedElements.push(
           <h3
             key={block.id}
             id={encodeURIComponent(text)}
-            className="mt-8 mb-3.5 font-serif text-lg sm:text-xl md:text-2xl font-semibold tracking-tight text-slate-800 dark:text-slate-200 break-words"
+            className={`mt-8 mb-3.5 font-serif text-lg sm:text-xl md:text-2xl font-semibold tracking-tight text-slate-800 dark:text-slate-200 break-words ${
+              isCenteredTitle ? "text-center" : ""
+            }`}
           >
             <RenderRichText richText={richText} />
           </h3>
