@@ -129,7 +129,7 @@ function matchesManualTarget(candidate: BlogPost, target: string): boolean {
   const cleanId = candidate.id.replace(/-/g, "").toLowerCase();
   const cleanSlug = candidate.slug.toLowerCase();
   const fullTitle = candidate.title.toLowerCase();
-  const shortTitle = extractCardTitle(candidate.title).toLowerCase();
+  const shortTitle = extractCardTitle(candidate.title).totoLowerCase();
   const hasMatchingTag = (candidate.tags || []).some(
     (t) => t.trim().toLowerCase() === cleanTarget
   );
@@ -278,6 +278,34 @@ function getRelatedPosts(currentPost: BlogPost, allPosts: BlogPost[], limit = 5)
   }
 
   return result.slice(0, limit);
+}
+
+/**
+- 若標題包含《片名》且後面有副標，拆分出「含《片名》前段」與「副標」；
+- 副標較長時自動換行，避免單字／雙字尾綴孤立跳行。
+ */
+function renderFormattedMainTitle(title: string) {
+  const match = title.match(/^(.*《[^》]+》)\s*(.+)$/);
+  if (!match) {
+    return title;
+  }
+
+  const headPart = match[1].trim();
+  const tailPart = match[2].trim();
+
+  if (!tailPart) {
+    return headPart;
+  }
+
+  return (
+    <>
+      <span>{headPart}</span>
+      <br className="hidden sm:inline" />
+      <span className="mt-1 sm:mt-0.5 inline-block text-[0.88em] font-semibold text-neutral-800 dark:text-neutral-200">
+        {tailPart}
+      </span>
+    </>
+  );
 }
 
 // 建置期不並行預編譯文章，避免部署瞬間同時發送數十次 Notion API 請求觸發 429 限流
@@ -463,7 +491,7 @@ export default async function PostPage({
   };
 
   return (
-    <AmbientPostLayout coverImage={post.coverImage} maxWidthClass="max-w-6xl">
+    <AmbientPostLayout coverImage={post.coverImage} maxWidthClass="max-w-7xl">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -496,14 +524,14 @@ export default async function PostPage({
         </div>
 
         {/* 主標題區塊 */}
-        <div className="mx-auto max-w-4xl space-y-2">
+        <div className="mx-auto max-w-5xl space-y-2">
           {seriesPrefix && (
             <p className="text-sm font-semibold tracking-wider text-amber-700 dark:text-amber-400">
               {seriesPrefix}
             </p>
           )}
-          <h1 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 leading-snug">
-            {cleanMainTitle}
+          <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 leading-snug">
+            {renderFormattedMainTitle(cleanMainTitle)}
           </h1>
         </div>
 

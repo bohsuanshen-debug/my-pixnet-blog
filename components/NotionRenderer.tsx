@@ -162,6 +162,77 @@ export function RenderRichText(props: RenderRichTextProps) {
   );
 }
 
+/**
+ * 若標題包含《片名》且後方還有副標／原文或年份，自動在《片名》後換行，避免零碎折行
+ */
+function renderHeadingContent(richText?: NotionRichText[]): React.ReactNode {
+  if (!richText || richText.length === 0) return null;
+
+  const plainText = richText.map((item) => item.text?.content || "").join("");
+  const match = plainText.match(/^(.*《[^》]+》)\s*(.+)$/);
+
+  if (!match) {
+    return <RenderRichText richText={richText} />;
+  }
+
+  const headTarget = match[1].trim();
+  const tailTarget = match[2].trim();
+
+  if (!tailTarget) {
+    return <RenderRichText richText={richText} />;
+  }
+
+  const headRichText: NotionRichText[] = [];
+  const tailRichText: NotionRichText[] = [];
+  let cursor = 0;
+
+  for (const item of richText) {
+    const seg = item.text?.content || "";
+    const segStart = cursor;
+    const segEnd = cursor + seg.length;
+    cursor = segEnd;
+
+    const splitPoint = headTarget.length;
+    if (segEnd <= splitPoint) {
+      headRichText.push(item);
+    } else if (segStart >= splitPoint) {
+      tailRichText.push(item);
+    } else {
+      const localSplit = Math.max(0, splitPoint - segStart);
+      const firstPart = seg.slice(0, localSplit);
+      const secondPart = seg.slice(localSplit).trimStart();
+
+      if (firstPart) {
+        headRichText.push({
+          ...item,
+          text: { ...item.text, content: firstPart },
+        });
+      }
+      if (secondPart) {
+        tailRichText.push({
+          ...item,
+          text: { ...item.text, content: secondPart },
+        });
+      }
+    }
+  }
+
+  if (headRichText.length === 0 || tailRichText.length === 0) {
+    return <RenderRichText richText={richText} />;
+  }
+
+  return (
+    <>
+      <span className="block">
+        <RenderRichText richText={headRichText} />
+      </span>
+      <span className="mt-1 block text-[0.82em] font-semibold text-slate-700 dark:text-slate-300">
+        <RenderRichText richText={tailRichText} />
+      </span>
+    </>
+  );
+}
+
 function findMatchedRelatedPost(
   plainText: string,
   allPosts?: RelatedPostLink[]
@@ -383,7 +454,7 @@ export default function NotionRenderer({
             id={encodeURIComponent(text)}
             className="mt-12 mb-5 font-serif text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-2"
           >
-            <RenderRichText richText={richText} />
+            {renderHeadingContent(richText)}
           </h2>
         );
         break;
@@ -398,7 +469,7 @@ export default function NotionRenderer({
             id={encodeURIComponent(text)}
             className="mt-8 mb-4 font-serif text-xl md:text-2xl font-semibold tracking-tight text-slate-800 dark:text-slate-200"
           >
-            <RenderRichText richText={richText} />
+            {renderHeadingContent(richText)}
           </h3>
         );
         break;
