@@ -8,6 +8,7 @@ import NotionRenderer from "@/components/NotionRenderer";
 import AdSense from "@/components/AdSense";
 import AmbientPostLayout from "@/components/AmbientPostLayout";
 import ShareSection from "@/components/ShareSection";
+import CommentSection from "@/components/CommentSection";
 import { formatDate } from "@/lib/utils";
 import { ArrowLeft, Calendar, Film, Sparkles } from "lucide-react";
 
@@ -537,6 +538,9 @@ export default async function PostPage({
         recommendScore={post.recommendScore}
         excerpt={seoDescription}
       />
+
+      {/* 讀者討論區（Giscus） */}
+      <CommentSection slug={post.slug} />
 
       {/* 相關影評推薦卡片區塊 */}
       {recommendedPosts.length > 0 && (
