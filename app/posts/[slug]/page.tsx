@@ -129,7 +129,7 @@ function matchesManualTarget(candidate: BlogPost, target: string): boolean {
   const cleanId = candidate.id.replace(/-/g, "").toLowerCase();
   const cleanSlug = candidate.slug.toLowerCase();
   const fullTitle = candidate.title.toLowerCase();
-  const shortTitle = extractCardTitle(candidate.title).totoLowerCase();
+  const shortTitle = extractCardTitle(candidate.title).toLowerCase();
   const hasMatchingTag = (candidate.tags || []).some(
     (t) => t.trim().toLowerCase() === cleanTarget
   );
