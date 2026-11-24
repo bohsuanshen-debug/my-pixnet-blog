@@ -25,11 +25,11 @@ export const TOP_10_MOVIES: Top10Item[] = [
   },
   {
     rank: 2,
-    title: "銀翼殺手 2049",
+    title: "銀翼殺手",
     category: "movie",
-    year: "2017",
-    coverImage: "https://i.ibb.co/s9bgKB3P/blade-runner-2049.png",
-    tagline: "賽博龐克美學的極致，靈魂與真實的無聲叩問",
+    year: "1982",
+    coverImage: "https://i.ibb.co/hxv5LP8c/8237a909da3e.jpg",
+    tagline: "賽博龐克科幻開山鼻祖，雨夜霓虹中仿生人的人性輓歌",
   },
   {
     rank: 3,
@@ -52,7 +52,7 @@ export const TOP_10_MOVIES: Top10Item[] = [
     title: "吸血鬼家庭屍篇",
     category: "movie",
     year: "2014",
-    coverImage: "https://i.ibb.co/8Y56zXn/image.jpg",
+    coverImage: "https://i.ibb.co/G4MSGCJq/af8fcb44d080.jpg",
     tagline: "偽紀錄片喜劇天花板，幽默又充滿溫情的吸血鬼日常",
     slug: "12226372684",
     watchScore: 88,
@@ -76,11 +76,11 @@ export const TOP_10_MOVIES: Top10Item[] = [
   },
   {
     rank: 8,
-    title: "罪人",
+    title: "罪人 (Sinners)",
     category: "movie",
-    year: "2018",
-    coverImage: "https://i.ibb.co/XrQ5G3g5/the-guilty.png",
-    tagline: "單一室內場景與電話線交織出窒息級的懸疑張力",
+    year: "2025",
+    coverImage: "https://i.ibb.co/JWvxfNjg/8128a771effe.jpg",
+    tagline: "麥可B喬丹分飾雙胞胎兄弟，重返30年代南方殘酷驚悚吸血鬼血戰",
   },
   {
     rank: 9,
@@ -218,7 +218,7 @@ export const TOP_10_GAMES: Top10Item[] = [
     title: "寶可夢: 心金／魂銀",
     category: "game",
     year: "2009",
-    coverImage: "https://i.ibb.co/xS8Hv90H/pokemon-hgss.jpg",
+    coverImage: "https://i.ibb.co/V0kWzBH3/995929362732.jpg",
     tagline: "跨越城都與關都雙地區的集大成經典，寶可夢跟隨系統的起點",
   },
   {
@@ -250,7 +250,7 @@ export const TOP_10_GAMES: Top10Item[] = [
     title: "漫威蜘蛛人 2",
     category: "game",
     year: "2023",
-    coverImage: "https://i.ibb.co/rKbVvNhj/spider-man-2.jpg",
+    coverImage: "https://i.ibb.co/mCwzSqZw/1a9d4acc02ea.jpg",
     tagline: "穿梭紐約曼哈頓極速擺盪的極致爽度，雙蜘蛛人的責任與抉擇",
   },
   {
@@ -258,7 +258,7 @@ export const TOP_10_GAMES: Top10Item[] = [
     title: "女神異聞錄 5 皇家版",
     category: "game",
     year: "2019",
-    coverImage: "https://i.ibb.co/rf1ZfqVS/persona-5-royal.jpg",
+    coverImage: "https://i.ibb.co/Fb2hN11k/69a51a2f8a86.jpg",
     tagline: "潮到出水的極致介面與爵士樂，怪盜團偷走腐敗之心的青春物語",
   },
   {
