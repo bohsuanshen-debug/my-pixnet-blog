@@ -12,8 +12,8 @@ import CommentSection from "@/components/CommentSection";
 import { formatDate } from "@/lib/utils";
 import { ArrowLeft, Calendar, Film, Sparkles } from "lucide-react";
 
-// 快取 10 分鐘，減少不必要的背景 API 請求；一旦生成成功即長期穩定提供快取
-export const revalidate = 600;
+// 快取 60 秒，讓 Notion 修改後的內容與評分在 1 分鐘內快速同步生效
+export const revalidate = 60;
 export const dynamicParams = true;
 
 function extractCardTitle(title: string): string {

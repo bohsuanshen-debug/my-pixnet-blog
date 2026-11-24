@@ -4,8 +4,8 @@ import FeaturedHero from "@/components/FeaturedHero";
 import PostFilterSection from "@/components/PostFilterSection";
 import HomeShareSection from "@/components/HomeShareSection";
 
-// Vercel ISR: 每 600 秒在背景增量重新驗證一次，配合快取保護機制極速響應
-export const revalidate = 600;
+// Vercel ISR: 每 60 秒在背景增量重新驗證一次，讓 Notion 更新在 1 分鐘內快速同步
+export const revalidate = 60;
 
 export default async function HomePage() {
   const posts = await getAllPosts();
