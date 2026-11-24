@@ -9,7 +9,7 @@ import {
   TOP_10_GAMES,
   Top10Item,
 } from "@/lib/top10-data";
-import { Film, Tv, Gamepad2, Sparkles, ArrowRight, Clock, Star } from "lucide-react";
+import { Film, Tv, Gamepad2, ArrowRight, Clock, Star } from "lucide-react";
 
 type CategoryType = "movie" | "series" | "game";
 
@@ -57,16 +57,11 @@ export default function Top10Client() {
       <div className="mx-auto max-w-5xl px-4 py-10 sm:py-14 sm:px-6 relative z-10">
         {/* 頂部標題介紹 */}
         <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12">
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-[#455230]/20 bg-white/40 px-3.5 py-1 text-xs font-semibold text-[#455230] shadow-xs backdrop-blur-md dark:border-white/20 dark:bg-white/10 dark:text-amber-300 mb-3">
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>沈伯嚴選 ｜ 永恆殿堂</span>
-          </div>
           <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
             沈伯的人生十大
           </h1>
           <p className="mt-3 text-sm sm:text-base text-slate-700/90 dark:text-slate-300">
-            精選影響戴爾瑞生命與審美品味的十大電影、十大影集與十大遊戲。<br className="hidden sm:inline" />
-            已發布心得者可直接點閱深度解析，其餘作品陸續籌備寫作中！
+            沒有標準答案，自己的品味自己決定！排名隨時更新的私心十大片單與遊戲庫。
           </p>
 
           {/* 三合一分類切換分頁 */}
