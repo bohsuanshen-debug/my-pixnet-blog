@@ -144,7 +144,7 @@ function matchesManualTarget(candidate: BlogPost, target: string): boolean {
 }
 
 /**
-- 第 3～5 格（及第 2 格無 3 字以上片名關聯時的備援）挑選邏輯：
+- 標籤與關聯挑選邏輯：
 - 相同標記（Tags）越多排越前面 → 手動推薦標記 → 片名 >= 3 字關聯 → 同分類 → 日期由新到舊
  */
 function pickBestTagRelatedPost(
@@ -209,10 +209,10 @@ function pickBestTagRelatedPost(
 }
 
 /**
-- 5 個推薦槽位：
+- 推薦槽位挑選：
 - 第 1 格：最新相同分類的文章
 - 第 2 格：片名連續 3 個字以上相同且共同字數最多的文章；若無則比照標籤重疊機制
-- 第 3～5 格：相同標記（Tags）越多的文章（不足則補最新文章）
+- 第 3 格起：相同標記（Tags）越多的文章（不足則補最新文章）
  */
 function getRelatedPosts(currentPost: BlogPost, allPosts: BlogPost[], limit = 5): BlogPost[] {
   const candidates = allPosts
@@ -265,7 +265,7 @@ function getRelatedPosts(currentPost: BlogPost, allPosts: BlogPost[], limit = 5)
     }
   }
 
-  // ── 第 3～5 格：相同標記（Tags）越多的文章（不足則補最新文章） ──
+  // ── 第 3 格起：相同標記（Tags）越多的文章（不足則補最新文章） ──
   while (result.length < limit) {
     const remainingPool = candidates.filter((p) => !pickedIds.has(p.id));
     if (remainingPool.length === 0) break;
@@ -361,13 +361,15 @@ export default async function PostPage({
   }
 
   let relatedPostLinks: { slug: string; title: string }[] = [];
-  let recommendedPosts: BlogPost[] = [];
+  let sidebarRecommendedPosts: BlogPost[] = [];
+  let mobileRecommendedPosts: BlogPost[] = [];
   try {
     const allPosts = await getAllPosts();
     relatedPostLinks = allPosts
       .filter((p) => p.id !== post.id)
       .map((p) => ({ slug: p.slug, title: p.title }));
-    recommendedPosts = getRelatedPosts(post, allPosts, 5);
+    sidebarRecommendedPosts = getRelatedPosts(post, allPosts, 5);
+    mobileRecommendedPosts = sidebarRecommendedPosts.slice(0, 3);
   } catch {
     // 延伸閱讀與相關推薦為非核心功能，失敗時靜默略過不影響主內文顯示
   }
@@ -461,7 +463,7 @@ export default async function PostPage({
   };
 
   return (
-    <AmbientPostLayout coverImage={post.coverImage}>
+    <AmbientPostLayout coverImage={post.coverImage} maxWidthClass="max-w-6xl">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -478,54 +480,54 @@ export default async function PostPage({
         </Link>
       </div>
 
-      {/* 雙欄主要佈局：左側文章主體 + 右側推薦文章與廣告欄 */}
+      {/* 置中橫跨最上方的文章標頭 */}
+      <header className="mb-10 border-b border-neutral-200/80 pb-8 text-center dark:border-neutral-800">
+        <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-neutral-600 dark:text-neutral-400 mb-4 font-medium">
+          {post.category && (
+            <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-2.5 py-1 font-semibold text-amber-800 dark:bg-amber-400/10 dark:text-amber-300">
+              <Film className="h-3 w-3" />
+              {post.category}
+            </span>
+          )}
+          <span className="flex items-center gap-1">
+            <Calendar className="h-3.5 w-3.5" />
+            <time dateTime={post.date}>{formatDate(post.date)}</time>
+          </span>
+        </div>
+
+        {/* 主標題區塊 */}
+        <div className="mx-auto max-w-4xl space-y-2">
+          {seriesPrefix && (
+            <p className="text-sm font-semibold tracking-wider text-amber-700 dark:text-amber-400">
+              {seriesPrefix}
+            </p>
+          )}
+          <h1 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 leading-snug">
+            {cleanMainTitle}
+          </h1>
+        </div>
+
+        {/* 評分膠囊（若有設定） */}
+        {(post.watchScore !== undefined || post.recommendScore !== undefined) && (
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+            {post.watchScore !== undefined && (
+              <span className="inline-flex items-center rounded-md border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-800 dark:border-amber-400/25 dark:bg-amber-400/10 dark:text-amber-300">
+                超主觀評分 {post.watchScore}/100
+              </span>
+            )}
+            {post.recommendScore !== undefined && (
+              <span className="inline-flex items-center rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:border-emerald-400/25 dark:bg-emerald-400/10 dark:text-emerald-300">
+                爆米花指數 {post.recommendScore}/10
+              </span>
+            )}
+          </div>
+        )}
+      </header>
+
+      {/* 雙欄主要佈局（桌機版左文右欄；手機版單欄） */}
       <div className="flex flex-col lg:flex-row items-start gap-8 xl:gap-10">
         {/* ── 左側：文章主內容區 ── */}
         <div className="w-full flex-1 min-w-0">
-          {/* 文章標頭資訊 */}
-          <header className="mb-8 border-b border-neutral-200/80 pb-8 dark:border-neutral-800">
-            <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-600 dark:text-neutral-400 mb-4 font-medium">
-              {post.category && (
-                <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-2.5 py-1 font-semibold text-amber-800 dark:bg-amber-400/10 dark:text-amber-300">
-                  <Film className="h-3 w-3" />
-                  {post.category}
-                </span>
-              )}
-              <span className="flex items-center gap-1">
-                <Calendar className="h-3.5 w-3.5" />
-                <time dateTime={post.date}>{formatDate(post.date)}</time>
-              </span>
-            </div>
-
-            {/* 主標題區塊 */}
-            <div className="space-y-2">
-              {seriesPrefix && (
-                <p className="text-sm font-semibold tracking-wider text-amber-700 dark:text-amber-400">
-                  {seriesPrefix}
-                </p>
-              )}
-              <h1 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 leading-snug">
-                {cleanMainTitle}
-              </h1>
-            </div>
-
-            {/* 評分膠囊（若有設定） */}
-            {(post.watchScore !== undefined || post.recommendScore !== undefined) && (
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                {post.watchScore !== undefined && (
-                  <span className="inline-flex items-center rounded-md border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-800 dark:border-amber-400/25 dark:bg-amber-400/10 dark:text-amber-300">
-                    超主觀評分 {post.watchScore}/100
-                  </span>
-                )}
-                {post.recommendScore !== undefined && (
-                  <span className="inline-flex items-center rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:border-emerald-400/25 dark:bg-emerald-400/10 dark:text-emerald-300">
-                    爆米花指數 {post.recommendScore}/10
-                  </span>
-                )}
-              </div>
-            )}
-          </header>
-
           {/* 廣告版位：文章頁頂部廣告 */}
           <AdSense slotType="article-top" />
 
@@ -550,14 +552,89 @@ export default async function PostPage({
           {/* 讀者討論區（Giscus） */}
           <CommentSection slug={post.slug} />
 
+          {/* 手機版維持原本底部 3 篇相關影評推薦卡片（桌機版隱藏改放右側欄） */}
+          {mobileRecommendedPosts.length > 0 && (
+            <section
+              aria-label="相關影評推薦"
+              className="my-10 block lg:hidden rounded-2xl border border-white/60 bg-white/35 p-5 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-2xl dark:border-slate-700/50 dark:bg-slate-900/35"
+            >
+              <div className="mb-4 flex items-center justify-between gap-2">
+                <h2 className="inline-flex items-center gap-2 text-base sm:text-lg font-bold text-[#455230] dark:text-amber-300">
+                  <Sparkles className="h-4 w-4 shrink-0" />
+                  <span>相關影評推薦</span>
+                </h2>
+                <Link
+                  href="/"
+                  className="text-xs font-semibold text-slate-600 hover:text-[#455230] dark:text-slate-400 dark:hover:text-amber-300 transition-colors"
+                >
+                  看全部文章 →
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {mobileRecommendedPosts.map((item) => {
+                  const cardTitle = extractCardTitle(item.title);
+                  return (
+                    <Link
+                      key={item.id}
+                      href={`/posts/${item.slug}`}
+                      className="group flex items-stretch justify-between gap-3 rounded-xl border border-white/60 bg-white/45 p-3.5 transition-all duration-300 hover:-translate-y-0.5 hover:border-white hover:bg-white/70 hover:shadow-md dark:border-slate-700/50 dark:bg-slate-800/40 dark:hover:border-slate-500 dark:hover:bg-slate-800/70"
+                    >
+                      <div className="flex flex-1 min-w-0 flex-col justify-between">
+                        <div className="min-w-0">
+                          <span className="inline-block rounded bg-[#455230]/10 px-2 py-0.5 text-[11px] font-semibold text-[#455230] dark:bg-amber-400/15 dark:text-amber-300">
+                            {item.category || "影評"}
+                          </span>
+                          <h3 className="mt-1.5 text-sm font-bold leading-snug text-slate-900 group-hover:text-[#455230] dark:text-slate-100 dark:group-hover:text-amber-300 line-clamp-2 transition-colors">
+                            {cardTitle}
+                          </h3>
+                        </div>
+
+                        <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold">
+                          {item.watchScore !== undefined && (
+                            <span className="rounded bg-[#455230] px-2 py-0.5 text-[#EBEBD8] dark:bg-amber-400/20 dark:text-amber-200">
+                              {item.watchScore}分
+                            </span>
+                          )}
+                          {item.recommendScore !== undefined && (
+                            <span className="rounded bg-[#EBEBD8] px-2 py-0.5 text-[#455230] dark:bg-emerald-950/60 dark:text-emerald-300">
+                              爆米花 {item.recommendScore}/10
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="relative h-24 w-16 shrink-0 overflow-hidden rounded-lg border border-white/70 bg-white/30 dark:border-slate-700/60 dark:bg-slate-900/40">
+                        {item.coverImage ? (
+                          <Image
+                            src={item.coverImage}
+                            alt={`${cardTitle} 海報封面`}
+                            fill
+                            sizes="64px"
+                            className="object-cover transition-transform duration-500 group-hover:scale-105"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-slate-400 dark:text-slate-600">
+                            <Film className="h-5 w-5 opacity-50" />
+                          </div>
+                        )}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
           {/* 廣告版位：文章底部廣告 */}
           <AdSense slotType="article-bottom" />
         </div>
 
-        {/* ── 右側：側邊欄（廣告位 + 5 篇相關影評推薦 + Sticky 廣告位） ── */}
+        {/* ── 右側：電腦版側邊欄（廣告位 + 5 篇相關影評推薦 + Sticky 廣告位） ── */}
         <aside
           aria-label="側邊推薦與廣告欄"
-          className="w-full lg:w-[320px] xl:w-[340px] shrink-0 space-y-6"
+          className="hidden lg:block w-full lg:w-[320px] xl:w-[340px] shrink-0 space-y-6"
         >
           {/* 側邊廣告位 1（頂部） */}
           <div className="rounded-2xl border border-white/60 bg-white/35 p-3 shadow-[0_8px_30px_rgb(0,0,0,0.03)] backdrop-blur-2xl dark:border-slate-700/50 dark:bg-slate-900/35">
@@ -568,7 +645,7 @@ export default async function PostPage({
           </div>
 
           {/* 相關影評推薦（5 篇直列清單） */}
-          {recommendedPosts.length > 0 && (
+          {sidebarRecommendedPosts.length > 0 && (
             <section
               aria-label="相關影評推薦"
               className="rounded-2xl border border-white/60 bg-white/40 p-4 sm:p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-2xl dark:border-slate-700/50 dark:bg-slate-900/35"
@@ -587,7 +664,7 @@ export default async function PostPage({
               </div>
 
               <div className="space-y-3">
-                {recommendedPosts.map((item, idx) => {
+                {sidebarRecommendedPosts.map((item, idx) => {
                   const cardTitle = extractCardTitle(item.title);
                   return (
                     <Link

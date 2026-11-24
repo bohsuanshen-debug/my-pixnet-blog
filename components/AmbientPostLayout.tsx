@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Image from "next/image";
 import { FastAverageColor } from "fast-average-color";
 
 interface AmbientPostLayoutProps {
   coverImage?: string;
+  maxWidthClass?: string;
   children: React.ReactNode;
 }
 
@@ -13,6 +13,7 @@ const DEFAULT_BG = "linear-gradient(135deg, #2b2d42 0%, #1d1e2c 100%)";
 
 export default function AmbientPostLayout({
   coverImage,
+  maxWidthClass = "max-w-6xl",
   children,
 }: AmbientPostLayoutProps) {
   const [gradient, setGradient] = useState<string>(DEFAULT_BG);
@@ -69,7 +70,9 @@ export default function AmbientPostLayout({
       )}
 
       {/* ── iPhone 通知卡片材質 (iOS Liquid Glass Modal) ── */}
-      <div className="relative z-10 mx-auto max-w-4xl rounded-[28px] sm:rounded-[36px] ios-glass-card p-6 sm:p-10 md:p-14 transition-all duration-300">
+      <div
+        className={`relative z-10 mx-auto ${maxWidthClass} rounded-[28px] sm:rounded-[36px] ios-glass-card p-6 sm:p-10 md:p-14 transition-all duration-300`}
+      >
         {/* 卡片頂部微反光倒角光邊 (模擬蘋果玻璃邊緣高光) */}
         <div className="pointer-events-none absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/80 to-transparent" />
         {children}
