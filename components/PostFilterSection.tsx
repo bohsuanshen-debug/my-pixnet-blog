@@ -14,6 +14,8 @@ import {
   RotateCcw,
   Search,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 type SortOption =
@@ -97,6 +99,8 @@ export default function PostFilterSection(props: PostFilterSectionProps) {
   const [openMenu, setOpenMenu] = useState<"category" | "year" | "sort" | null>(
     null
   );
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const POSTS_PER_PAGE = 16;
 
   const controlsRef = useRef<HTMLDivElement>(null);
 
@@ -106,6 +110,10 @@ export default function PostFilterSection(props: PostFilterSectionProps) {
       paramCat && CATEGORY_OPTIONS.includes(paramCat) ? paramCat : "全部"
     );
   }, [searchParams]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, selectedYear, searchQuery, sortBy]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -185,6 +193,20 @@ export default function PostFilterSection(props: PostFilterSectionProps) {
       }
     });
   }, [posts, selectedCategory, selectedYear, searchQuery, sortBy]);
+
+  const totalPages = Math.ceil(filteredPosts.length / POSTS_PER_PAGE) || 1;
+  const paginatedPosts = useMemo(() => {
+    const start = (currentPage - 1) * POSTS_PER_PAGE;
+    return filteredPosts.slice(start, start + POSTS_PER_PAGE);
+  }, [filteredPosts, currentPage]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    const targetElement = document.getElementById("all-posts");
+    if (targetElement) {
+      targetElement.scrollIntoView({ behavior: "smooth" });
+    }
+  };
 
   const currentSort =
     SORT_OPTIONS.find((opt) => opt.value === sortBy) || SORT_OPTIONS[0];
@@ -449,11 +471,85 @@ export default function PostFilterSection(props: PostFilterSectionProps) {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredPosts.map((post) => (
-            <PostCard key={post.id} post={post} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {paginatedPosts.map((post) => (
+              <PostCard key={post.id} post={post} />
+            ))}
+          </div>
+
+          {/* 分頁控制條 */}
+          {totalPages > 1 && (
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-1.5 pt-4">
+              {/* 上一頁 */}
+              <button
+                type="button"
+                onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                className="inline-flex items-center gap-1 rounded-xl border border-white/60 bg-white/40 px-3 py-2 text-xs font-semibold text-[#455230] shadow-xs backdrop-blur-md transition-all disabled:opacity-35 disabled:cursor-not-allowed hover:bg-white/70 active:scale-95 dark:border-slate-700/50 dark:bg-slate-900/40 dark:text-slate-200"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                <span>上一頁</span>
+              </button>
+
+              {/* 頁碼按鈕 */}
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (pageNum) => {
+                    // 若總頁數很多，可顯示當前頁附近的頁碼
+                    if (
+                      pageNum === 1 ||
+                      pageNum === totalPages ||
+                      (pageNum >= currentPage - 2 && pageNum <= currentPage + 2)
+                    ) {
+                      const isActive = currentPage === pageNum;
+                      return (
+                        <button
+                          key={pageNum}
+                          type="button"
+                          onClick={() => handlePageChange(pageNum)}
+                          className={`min-w-9 h-9 rounded-xl text-xs font-bold transition-all shadow-xs ${
+                            isActive
+                              ? "bg-[#455230] text-[#EBEBD8] shadow-sm scale-105"
+                              : "border border-white/60 bg-white/40 text-[#455230] hover:bg-white/70 backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-900/40 dark:text-slate-200"
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    } else if (
+                      pageNum === currentPage - 3 ||
+                      pageNum === currentPage + 3
+                    ) {
+                      return (
+                        <span
+                          key={pageNum}
+                          className="px-1 text-xs text-slate-400 select-none"
+                        >
+                          …
+                        </span>
+                      );
+                    }
+                    return null;
+                  }
+                )}
+              </div>
+
+              {/* 下一頁 */}
+              <button
+                type="button"
+                onClick={() =>
+                  handlePageChange(Math.min(totalPages, currentPage + 1))
+                }
+                disabled={currentPage === totalPages}
+                className="inline-flex items-center gap-1 rounded-xl border border-white/60 bg-white/40 px-3 py-2 text-xs font-semibold text-[#455230] shadow-xs backdrop-blur-md transition-all disabled:opacity-35 disabled:cursor-not-allowed hover:bg-white/70 active:scale-95 dark:border-slate-700/50 dark:bg-slate-900/40 dark:text-slate-200"
+              >
+                <span>下一頁</span>
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+        </>
       )}
     </section>
   );
