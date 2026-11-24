@@ -282,7 +282,7 @@ function getRelatedPosts(currentPost: BlogPost, allPosts: BlogPost[], limit = 5)
 
 /**
 - 若標題包含《片名》且後面有副標，拆分出「含《片名》前段」與「副標」；
-- 副標較長時自動換行並微調比例，貼合紅圈尺寸。
+- 副標較長時自動換行並保持俐落層次。
  */
 function renderFormattedMainTitle(title: string) {
   const match = title.match(/^(.*《[^》]+》)\s*(.+)$/);
@@ -301,7 +301,7 @@ function renderFormattedMainTitle(title: string) {
     <>
       <span>{headPart}</span>
       <br className="hidden sm:inline" />
-      <span className="mt-1 sm:mt-0.5 inline-block text-[0.86em] font-semibold text-neutral-800 dark:text-neutral-200">
+      <span className="mt-1.5 sm:mt-1 inline-block text-[0.82em] font-bold text-neutral-800 dark:text-neutral-200">
         {tailPart}
       </span>
     </>
@@ -508,9 +508,9 @@ export default async function PostPage({
         </Link>
       </div>
 
-      {/* 置中橫跨最上方的文章標頭（流式自適應字體大小，貼合紅圈尺寸） */}
-      <header className="mb-9 border-b border-neutral-200/80 pb-7 text-center dark:border-neutral-800">
-        <div className="flex flex-wrap items-center justify-center gap-2.5 text-xs text-neutral-600 dark:text-neutral-400 mb-3 font-medium">
+      {/* 置中橫跨最上方的文章標頭（超大氣勢主標題） */}
+      <header className="mb-10 border-b border-neutral-200/80 pb-8 text-center dark:border-neutral-800">
+        <div className="flex flex-wrap items-center justify-center gap-2.5 text-xs text-neutral-600 dark:text-neutral-400 mb-3.5 font-medium">
           {post.category && (
             <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-2.5 py-0.5 font-semibold text-amber-800 dark:bg-amber-400/10 dark:text-amber-300">
               <Film className="h-3 w-3" />
@@ -523,21 +523,21 @@ export default async function PostPage({
           </span>
         </div>
 
-        {/* 主標題區塊：自動隨視窗縮放字級 */}
-        <div className="mx-auto max-w-3xl space-y-1.5 px-2">
+        {/* 超大主標題區塊 */}
+        <div className="mx-auto max-w-6xl space-y-2 px-2">
           {seriesPrefix && (
-            <p className="text-xs sm:text-sm font-semibold tracking-wider text-amber-700 dark:text-amber-400">
+            <p className="text-sm sm:text-base font-bold tracking-wider text-amber-700 dark:text-amber-400">
               {seriesPrefix}
             </p>
           )}
-          <h1 className="font-serif text-[clamp(1.25rem,2.4vw,2rem)] font-bold tracking-tight text-neutral-900 dark:text-neutral-100 leading-snug">
+          <h1 className="font-serif text-[clamp(1.75rem,4vw,3.35rem)] font-black tracking-tight text-neutral-900 dark:text-neutral-100 leading-[1.22]">
             {renderFormattedMainTitle(cleanMainTitle)}
           </h1>
         </div>
 
         {/* 評分膠囊（若有設定） */}
         {(post.watchScore !== undefined || post.recommendScore !== undefined) && (
-          <div className="mt-3.5 flex flex-wrap items-center justify-center gap-2">
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
             {post.watchScore !== undefined && (
               <span className="inline-flex items-center rounded-md border border-amber-500/25 bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:border-amber-400/25 dark:bg-amber-400/10 dark:text-amber-300">
                 超主觀評分 {post.watchScore}/100
