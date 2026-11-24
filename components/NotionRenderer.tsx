@@ -173,6 +173,17 @@ function isCenteredWorkCaptionLine(plainText: string): boolean {
   return true;
 }
 
+/**
+ * 判斷是否為文末 FB / IG 社群按讚推廣單行句子（手機版自動縮小字體以維持不折行）
+ */
+function isSocialPromoLine(plainText: string): boolean {
+  const trimmed = plainText.trim();
+  return (
+    trimmed.includes("【影視戴爾瑞】") &&
+    (trimmed.startsWith("喜歡的朋友") || trimmed.startsWith("更多影視"))
+  );
+}
+
 function findMatchedRelatedPost(
   plainText: string,
   allPosts?: RelatedPostLink[]
@@ -376,12 +387,25 @@ export default function NotionRenderer({
           }
         }
 
-        // 若為海報下方《作品名》(English Title, Year) 小標，置中顯示
+        // 海報下方《作品名》(English Title, Year) 小標：置中且手機版自動縮放保持單行
         if (isCenteredWorkCaptionLine(plainText)) {
           renderedElements.push(
             <p
               key={block.id}
-              className="mt-3 mb-7 text-center font-serif text-base sm:text-lg font-bold tracking-tight text-slate-800 dark:text-slate-200"
+              className="mt-3 mb-7 text-center font-serif text-[clamp(0.78rem,3.6vw,1.125rem)] sm:text-lg font-bold tracking-tight text-slate-800 dark:text-slate-200 sm:whitespace-normal whitespace-nowrap"
+            >
+              <RenderRichText richText={richText} />
+            </p>
+          );
+          break;
+        }
+
+        // 文末 FB / Instagram 按讚導流句：手機版自動縮放字級保持同一行，桌機版維持 18px
+        if (isSocialPromoLine(plainText)) {
+          renderedElements.push(
+            <p
+              key={block.id}
+              className="my-4 text-[clamp(0.8rem,3.65vw,1.125rem)] sm:text-[18px] leading-[1.88] text-slate-700 dark:text-slate-300 sm:whitespace-pre-line whitespace-nowrap"
             >
               <RenderRichText richText={richText} />
             </p>
@@ -410,8 +434,10 @@ export default function NotionRenderer({
           <h2
             key={block.id}
             id={encodeURIComponent(text)}
-            className={`mt-11 mb-4 font-serif text-xl sm:text-2xl md:text-[26px] font-bold tracking-tight text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-2 break-words ${
-              isCenteredTitle ? "text-center" : ""
+            className={`mt-11 mb-4 font-serif font-bold tracking-tight text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-2 ${
+              isCenteredTitle
+                ? "text-center text-[clamp(0.8rem,3.6vw,1.5rem)] sm:text-2xl md:text-[26px] sm:whitespace-normal whitespace-nowrap"
+                : "text-xl sm:text-2xl md:text-[26px] break-words"
             }`}
           >
             <RenderRichText richText={richText} />
@@ -429,8 +455,10 @@ export default function NotionRenderer({
           <h3
             key={block.id}
             id={encodeURIComponent(text)}
-            className={`mt-8 mb-3.5 font-serif text-lg sm:text-xl md:text-2xl font-semibold tracking-tight text-slate-800 dark:text-slate-200 break-words ${
-              isCenteredTitle ? "text-center" : ""
+            className={`mt-8 mb-3.5 font-serif font-semibold tracking-tight text-slate-800 dark:text-slate-200 ${
+              isCenteredTitle
+                ? "text-center text-[clamp(0.78rem,3.6vw,1.35rem)] sm:text-xl md:text-2xl sm:whitespace-normal whitespace-nowrap"
+                : "text-lg sm:text-xl md:text-2xl break-words"
             }`}
           >
             <RenderRichText richText={richText} />

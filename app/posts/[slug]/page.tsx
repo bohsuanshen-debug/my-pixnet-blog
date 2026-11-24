@@ -281,8 +281,8 @@ function getRelatedPosts(currentPost: BlogPost, allPosts: BlogPost[], limit = 5)
 }
 
 /**
-- 若標題包含《片名》且後面有副標，拆分出「含《片名》前段」與「副標」；
-- 副標較長時自動換行並保持俐落層次。
+- 手機與電腦皆保持「《片名》前段一行 + 副標一行」結構；
+- 手機版前段加上 whitespace-nowrap 並自動縮放字級，避免在手機螢幕上把片名斷成兩行。
  */
 function renderFormattedMainTitle(title: string) {
   const match = title.match(/^(.*《[^》]+》)\s*(.+)$/);
@@ -299,9 +299,11 @@ function renderFormattedMainTitle(title: string) {
 
   return (
     <>
-      <span>{headPart}</span>
-      <br className="hidden sm:inline" />
-      <span className="mt-1.5 sm:mt-1 inline-block text-[0.82em] font-bold text-neutral-800 dark:text-neutral-200">
+      <span className="inline-block max-w-full sm:whitespace-normal whitespace-nowrap text-[clamp(1.05rem,4.4vw,1.6rem)] sm:text-[1em]">
+        {headPart}
+      </span>
+      <br />
+      <span className="mt-1.5 sm:mt-1 inline-block text-[clamp(0.95rem,3.9vw,1.35rem)] sm:text-[0.82em] font-bold text-neutral-800 dark:text-neutral-200">
         {tailPart}
       </span>
     </>
@@ -508,7 +510,7 @@ export default async function PostPage({
         </Link>
       </div>
 
-      {/* 置中橫跨最上方的文章標頭（超大氣勢主標題） */}
+      {/* 置中橫跨最上方的文章標頭（桌機超大氣勢、手機自動等比不亂折行） */}
       <header className="mb-10 border-b border-neutral-200/80 pb-8 text-center dark:border-neutral-800">
         <div className="flex flex-wrap items-center justify-center gap-2.5 text-xs text-neutral-600 dark:text-neutral-400 mb-3.5 font-medium">
           {post.category && (
@@ -523,14 +525,14 @@ export default async function PostPage({
           </span>
         </div>
 
-        {/* 超大主標題區塊 */}
-        <div className="mx-auto max-w-6xl space-y-2 px-2">
+        {/* 主標題區塊 */}
+        <div className="mx-auto max-w-6xl space-y-2 px-1 sm:px-2">
           {seriesPrefix && (
-            <p className="text-sm sm:text-base font-bold tracking-wider text-amber-700 dark:text-amber-400">
+            <p className="text-xs sm:text-base font-bold tracking-wider text-amber-700 dark:text-amber-400">
               {seriesPrefix}
             </p>
           )}
-          <h1 className="font-serif text-[clamp(1.75rem,4vw,3.35rem)] font-black tracking-tight text-neutral-900 dark:text-neutral-100 leading-[1.22]">
+          <h1 className="font-serif text-[clamp(1.1rem,4.4vw,1.65rem)] sm:text-[clamp(1.75rem,4vw,3.35rem)] font-black tracking-tight text-neutral-900 dark:text-neutral-100 leading-[1.28] sm:leading-[1.22]">
             {renderFormattedMainTitle(cleanMainTitle)}
           </h1>
         </div>
