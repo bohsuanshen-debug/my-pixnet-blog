@@ -101,6 +101,13 @@ export default function Header() {
                 {item.label}
               </Link>
             ))}
+            <Link
+              href="/top10"
+              className="inline-flex items-center gap-1 text-[#455230] font-bold dark:text-amber-300 hover:opacity-80 transition-opacity"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>人生十大</span>
+            </Link>
           </div>
 
           <div className="relative" ref={dropdownRef}>
@@ -123,6 +130,14 @@ export default function Header() {
                 <div className="px-3 py-1 text-[11px] font-semibold tracking-wider text-slate-400">
                   文章分類
                 </div>
+                <Link
+                  href="/top10"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-[#455230] hover:bg-amber-50/80 dark:text-amber-300 dark:hover:bg-slate-800 transition-colors"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span>沈伯的人生十大</span>
+                </Link>
                 {CATEGORY_NAV_ITEMS.map((item) => (
                   <Link
                     key={item.category}
