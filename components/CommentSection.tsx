@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import Giscus from "@giscus/react";
 import { MessageSquareText } from "lucide-react";
