@@ -16,9 +16,6 @@ export default function CommentSection({ slug }: CommentSectionProps) {
   const category = process.env.NEXT_PUBLIC_GISCUS_CATEGORY || "Announcements";
   const categoryId = process.env.NEXT_PUBLIC_GISCUS_CATEGORY_ID || "";
 
-  const isConfigured = Boolean(repo && repoId && categoryId);
-
-  // 偵測網站目前的明暗色模式，自動同步 Giscus 留言區佈景主題
   useEffect(() => {
     const checkDark = () => {
       setIsDark(document.documentElement.classList.contains("dark"));
@@ -33,9 +30,8 @@ export default function CommentSection({ slug }: CommentSectionProps) {
     return () => observer.disconnect();
   }, []);
 
-  // 動態載入或更新 Giscus 留言框
   useEffect(() => {
-    if (!isConfigured || !containerRef.current) return;
+    if (!containerRef.current || !repo || !repoId || !categoryId) return;
 
     const theme = isDark ? "transparent_dark" : "light";
     const existingIframe = containerRef.current.querySelector<HTMLIFrameElement>(
@@ -70,7 +66,7 @@ export default function CommentSection({ slug }: CommentSectionProps) {
     script.setAttribute("data-loading", "lazy");
 
     containerRef.current.appendChild(script);
-  }, [isConfigured, isDark, repo, repoId, category, categoryId, slug]);
+  }, [isDark, repo, repoId, category, categoryId, slug]);
 
   return (
     <section
@@ -89,30 +85,7 @@ export default function CommentSection({ slug }: CommentSectionProps) {
         </span>
       </div>
 
-      {isConfigured ? (
-        <div ref={containerRef} className="giscus min-h-[150px]" />
-      ) : (
-        <div className="rounded-xl border border-dashed border-[#455230]/30 bg-white/40 p-5 text-center text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-300">
-          <p className="font-semibold text-[#455230] dark:text-amber-300">
-            留言板功能已就緒，尚未填入 GitHub Giscus 環境變數
-          </p>
-          <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
-            請於 Vercel 環境變數設定{" "}
-            <code className="rounded bg-black/5 px-1.5 py-0.5 dark:bg-white/10">
-              NEXT_PUBLIC_GISCUS_REPO
-            </code>
-            、
-            <code className="rounded bg-black/5 px-1.5 py-0.5 dark:bg-white/10">
-              NEXT_PUBLIC_GISCUS_REPO_ID
-            </code>{" "}
-            與{" "}
-            <code className="rounded bg-black/5 px-1.5 py-0.5 dark:bg-white/10">
-              NEXT_PUBLIC_GISCUS_CATEGORY_ID
-            </code>{" "}
-            即可立即開啟留言。
-          </p>
-        </div>
-      )}
+      <div ref={containerRef} className="giscus min-h-[150px]" />
     </section>
   );
 }
